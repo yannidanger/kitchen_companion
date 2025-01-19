@@ -25,6 +25,30 @@ ingredient_routes = Blueprint('ingredient_routes', __name__)
 
 grocery_routes = Blueprint('grocery_routes', __name__)
 
+DEFAULT_SECTIONS = [
+    "Pharmacy Section", "Bakery Section", "Deli", "Produce Section",
+    "Dairy Section", "Aisle 1: Breakfast Items", "Aisle 2: Baby Products",
+    "Aisle 3: Health & Beauty", "Aisle 4: Soup", "Aisle 5: Ethnic Foods",
+    "Aisle 6: Candy", "Aisle 7: Condiments & Baking", "Aisle 8: Canned, Dry, Sauces",
+    "Aisle 9: Pet Supplies, Magazines, Batteries", "Aisle 10: Cleaning Supplies",
+    "Aisle 11: Paper Goods", "Aisle 12: Bread, Water & Snacks",
+    "Aisle 13: Frozen Foods Section", "Seafood Section", "Meat Section",
+    "Aisle 14: Cheeses, Hotdogs, Frozen Meals", "Aisle 15: Dessert Aisle",
+    "Alcohol Section"
+]
+
+def format_grocery_list_with_default_sections(ingredients):
+    from collections import defaultdict  # Ensure you have the import
+    grouped = defaultdict(list)
+    for item in ingredients:
+        section = item.get('section', 'Uncategorized') or 'Uncategorized'
+        grouped[section].append(item)
+
+    for section in DEFAULT_SECTIONS:
+        if section not in grouped:
+            grouped[section] = []
+
+    return [{"section": section, "items": grouped[section]} for section in grouped]
 
 @recipes_routes.route('/recipes', methods=['GET'])
 def recipes():
