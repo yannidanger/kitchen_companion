@@ -1,9 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     const groceryListContainer = document.getElementById('grocery-list-container');
-    const precisionToggle = document.getElementById('precision-mode-toggle');
+    const groceryListElement = document.createElement('ul');
+    groceryListElement.id = 'grocery-list';
+    groceryListContainer.appendChild(groceryListElement);
 
-    // Fetch grocery list data from the API
-    // Fetch the grocery list on form submission
+    const weeklyPlanId = new URLSearchParams(window.location.search).get('weekly_plan_id');
+    console.log('Weekly Plan ID:', weeklyPlanId);
+
+    if (weeklyPlanId) {
+        fetchGroceryList({ weekly_plan_id: weeklyPlanId });
+    } else {
+        groceryListContainer.innerHTML = '<p>No weekly plan selected. Please go back and choose one.</p>';
+    }
+
     async function fetchGroceryList(data) {
         try {
             const response = await fetch('/api/generate_grocery_list', {
@@ -19,61 +28,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
+
             if (result.error) {
                 alert(result.error);
                 return;
             }
 
-            // Render the grocery list
-            renderGroceryList(result.grocery_list);
+            renderGroceryList(result); // Call render with the fetched list
         } catch (error) {
-            console.error(error);
-            alert('An error occurred while generating the grocery list.');
+            console.error('Error fetching grocery list:', error);
+            groceryListContainer.innerHTML = '<p>Error loading grocery list. Please try again later.</p>';
         }
     }
 
-    // Render the grocery list in the DOM
     function renderGroceryList(groceryList) {
-        const listContainer = document.getElementById('grocery-list');
-        listContainer.innerHTML = '';
+        groceryListElement.innerHTML = ''; // Clear the current list
 
-        if (!groceryList.length) {
-            listContainer.innerHTML = '<p>No items in the grocery list.</p>';
+        if (!groceryList || groceryList.length === 0) {
+            groceryListElement.innerHTML = '<p>No items in the grocery list.</p>';
             return;
         }
 
-        groceryList.forEach(item => {
-            const listItem = document.createElement('li');
-            listItem.textContent = `${item.item_name} - ${item.quantity || ''} ${item.unit || ''}`;
-            listContainer.appendChild(listItem);
+        // Render sections and their items
+        groceryList.forEach((section) => {
+            const sectionHeader = document.createElement('h3');
+            sectionHeader.textContent = section.section; // Add section name
+            groceryListElement.appendChild(sectionHeader);
+
+            const ul = document.createElement('ul');
+            section.items.forEach((item) => {
+                const li = document.createElement('li');
+                li.textContent = `${item.item_name}` + 
+                    (item.quantity ? ` - ${item.quantity} ${item.unit || ''}` : '');
+                ul.appendChild(li);
+            });
+            groceryListElement.appendChild(ul);
         });
     }
-
-
-
-
-    // Toggle precision mode
-    precisionToggle.addEventListener('change', () => {
-        const groceryItems = document.querySelectorAll('.grocery-item');
-        groceryItems.forEach(item => {
-            const precisionInfo = item.querySelector('.precision-info');
-            if (precisionInfo) {
-                precisionInfo.classList.toggle('hidden', !precisionToggle.checked);
-            }
-        });
-    });
-
-    // Initialize
-    // Initialize
-    const weeklyPlanId = new URLSearchParams(window.location.search).get('weekly_plan_id');
-    console.log('window.location.search:', window.location.search); // Log the query string
-    console.log('Parsed Weekly Plan ID:', weeklyPlanId);
-
-    if (weeklyPlanId) {
-        fetchGroceryList(weeklyPlanId);
-    } else {
-        groceryListContainer.innerHTML = '<p>No weekly plan selected. Please go back and choose one.</p>';
-    }
-
-
 });
