@@ -375,16 +375,27 @@ def save_and_generate_grocery_list():
         db.session.commit()
         logger.info(f"Weekly plan '{weekly_plan.name}' saved successfully with ID: {weekly_plan.id}")
 
-        # Generate the grocery list
         ingredients = {}
         for meal in weekly_plan.meals:
             if meal.recipe_id:
                 recipe = Recipe.query.get(meal.recipe_id)
                 if recipe:
-                    logger.debug(f"Processing recipe: {recipe.name}")
+                    logger.debug(f"Processing recipe: {recipe.name}")  # Log recipe being processed
+                    
                     for ingredient in recipe.ingredients:
-                        key = (ingredient.item_name, ingredient.unit or "unitless")
-                        ingredients[key] = ingredients.get(key, 0) + (ingredient.quantity or 0)
+                        # Validation: Check if ingredient data is valid
+                        # Check if ingredient data is valid
+                        if not ingredient.item_name:
+                            logger.warning(f"Ingredient missing name: {ingredient.to_dict()}")
+                            continue  # Skip invalid entries
+                        
+                        # Handle missing quantity and unit gracefully
+                        quantity = ingredient.quantity or 0  # Default to 0 if missing
+                        unit = ingredient.unit or "unitless"  # Default unit to "unitless"
+                        key = (ingredient.item_name, unit)
+
+                        # Aggregate quantity
+                        ingredients[key] = ingredients.get(key, 0) + quantity
 
         formatted_ingredients = [
             {"item_name": name, "unit": unit, "quantity": round(quantity, 2)}
@@ -487,13 +498,19 @@ def get_categorized_grocery_list():
 
         # Fetch the weekly plan
         weekly_plan = WeeklyPlan.query.get(weekly_plan_id)
+        logger.info(f"Weekly plan: {weekly_plan.name if weekly_plan else 'None'}")
         if not weekly_plan:
             logger.warning(f"Weekly plan not found for ID: {weekly_plan_id}")
             return jsonify({'error': 'Weekly plan not found'}), 404
 
+        if not weekly_plan.meals:
+            logger.warning(f"Weekly plan {weekly_plan_id} has no meals associated.")
+            return jsonify({'error': 'No meals in this weekly plan'}), 400
+
         # Fetch the store
         store_id = request.args.get('store_id')
         store = Store.query.get(store_id) if store_id else Store.query.filter_by(is_default=True).first()
+        logger.info(f"Store: {store.name if store else 'None'}")  # Add here
         if not store:
             logger.warning(f"No store found. Store ID: {store_id}")
             return jsonify({'error': 'Store not found'}), 404
@@ -501,20 +518,26 @@ def get_categorized_grocery_list():
         # Build the categorized list
         categorized_list = []
         for section in store.sections:
+            logger.info(f"Processing section: {section.name}")  # Add here
             items = IngredientSection.query.filter_by(section_id=section.id).all()
+            logger.debug(f"Processing section '{section.name}' with {len(items)} items.")
+            if not items:
+                logger.warning(f"Section '{section.name}' has no items.")
+                continue
             categorized_list = []
         for section in store.sections:
             items = IngredientSection.query.filter_by(section_id=section.id).all()
             categorized_list.append({
-                'section': section.name,
-                'items': [
-                    {
-                        'name': item.ingredient.item_name if item.ingredient else 'Unknown Ingredient',
-                        'quantity': item.ingredient.quantity if item.ingredient else 0
-                    }
-                    for item in items if item.ingredient  # Skip rows where ingredient is None
-                ]
-            })
+        'section': section.name,
+        'items': [
+            {
+                'name': item.ingredient.item_name if item.ingredient else 'Unknown Ingredient',
+                'quantity': item.ingredient.quantity if item.ingredient else 0,
+                'unit': item.ingredient.unit if item.ingredient else 'unitless'
+            }
+            for item in items if item.ingredient  # Only include valid ingredients
+        ]
+    })
 
         
         logger.info(f"Categorized grocery list: {categorized_list}")

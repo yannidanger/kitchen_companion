@@ -8,6 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`/grocery/api/grocery_list?weekly_plan_id=${weeklyPlanId}`);
             console.log('Received Data:', data);
+            if (!Array.isArray(data)) {
+                console.error("Invalid grocery list format:", data);
+                groceryListContainer.innerHTML = "<p>Unexpected data format received.</p>";
+                return;
+            }
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                console.error('Invalid or empty grocery list received:', data); // Add here
+                groceryListContainer.innerHTML = '<p>No grocery list data available.</p>';
+                return;
+            }
+            
             if (!response.ok) {
                 throw new Error(`Failed to fetch grocery list. Status: ${response.status}`);
             }
@@ -41,9 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const listItem = document.createElement('li');
                 listItem.textContent = `${item.name} (${item.quantity} ${item.unit})`;
                 itemList.appendChild(listItem);
+                if (!data || data.length === 0) {
+                    groceryListContainer.innerHTML = '<p>The grocery list is empty or unavailable.</p>';  // Add here
+                    return;
+                }
+                
             });
     
             sectionDiv.appendChild(itemList);
+            console.log(`Section rendered: ${section.section}`, section.items);
             groceryListContainer.appendChild(sectionDiv);
         });
     }
