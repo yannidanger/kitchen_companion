@@ -1,0 +1,340 @@
+/* General Body Styling */
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0; /* Reset margin to prevent browser defaults */
+    padding: 20px; /* Add consistent padding */
+    background-color: #f7f7f7; /* Optional: Subtle background for better contrast */
+}
+
+
+/* Recipe Container */
+.recipe {
+    border: 5px solid red;
+    background-color: lightblue;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.recipe-instructions {
+    white-space: normal; /* Automatically adjust spacing */
+    margin: 0; /* Remove extra margins */
+    padding: 0; /* Remove padding */
+    line-height: 1.6; /* Add consistent spacing between lines */
+}
+
+
+/* Form Styling */
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+input,
+textarea,
+select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Ingredients Container */
+.ingredients-container {
+    margin-bottom: 10px;
+}
+
+#ingredientsContainer {
+    padding: 10px; /* Add spacing around the ingredient rows */
+}
+
+/* Ingredient Row Styling */
+.ingredient-row {
+    display: flex; /* Flexbox for alignment */
+    align-items: center; /* Vertically align all elements */
+    gap: 10px; /* Add spacing between fields */
+    margin-bottom: 10px; /* Space between rows */
+    flex-wrap: wrap; /* Wrap rows on small screens */
+}
+
+/* Adjust field sizes */
+.ingredient-row input[name="quantity"] {
+    width: 60px; /* Smaller for quantity */
+}
+
+.ingredient-row select[name="unit"] {
+    width: 100px; /* Smaller for unit dropdown */
+}
+
+.ingredient-row select[name="size"] {
+    width: 120px; /* Just enough for the largest word */
+}
+
+.ingredient-row input[name="descriptor"],
+.ingredient-row input[name="item_name"],
+.ingredient-row input[name="additional_descriptor"] {
+    flex: 1; /* Make these fields expand to take remaining space */
+    min-width: 120px; /* Ensure they don't get too small */
+}
+
+/* Remove Ingredient Button */
+.ingredient-row button.removeIngredient {
+    width: 36px; /* Set equal width and height */
+    height: 36px; /* Match input field height */
+    padding: 0; /* Remove extra padding */
+    border-radius: 50%; /* Make the button round */
+    display: flex;
+    align-items: center; /* Center the text/icon inside the button */
+    justify-content: center;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px; /* Adjust font size for the text/icon */
+    transition: background-color 0.3s ease;
+}
+
+.ingredient-row button.removeIngredient:hover {
+    background-color: #e60000; /* Darker red on hover */
+}
+
+/* General Dropdown Styling */
+select[name="unit"],
+select[name="size"],
+select[name="recipe"] {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    width: 100%;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+    appearance: none; /* Remove default dropdown arrow for modern browsers */
+}
+
+/* Styling for Hover and Focus */
+select[name="unit"]:hover,
+select[name="size"]:hover,
+select[name="recipe"]:hover {
+    border-color: #007BFF;
+    background-color: #f1f8ff;
+}
+
+select[name="unit"]:focus,
+select[name="size"]:focus,
+select[name="recipe"]:focus {
+    border-color: #0056b3;
+    outline: none;
+}
+
+/* Styling for Category Headers in Dropdown */
+select[name="unit"] option:disabled,
+select[name="size"] option:disabled,
+select[name="recipe"] option:disabled {
+    font-weight: bold;
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+/* Option Styling */
+select[name="unit"] option,
+select[name="size"] option,
+select[name="recipe"] option {
+    padding: 5px;
+}
+
+/* Ensure consistent input field height */
+.ingredient-row input, 
+.ingredient-row select {
+    height: 36px; /* Match height of the button */
+    line-height: 1.2;
+    box-sizing: border-box; /* Include padding in the height */
+}
+
+.recipe-display {
+    font-family: 'Arial', sans-serif;
+    font-size: 16px; /* Adjust for readability */
+    line-height: 1.5; /* Improve text spacing */
+    padding: 15px; /* Space around the content */
+    margin-bottom: 20px; /* Separate from other elements */
+    border: 1px solid #ccc; /* Define boundaries */
+    border-radius: 5px; /* Smooth edges */
+    background-color: #fff; /* White background for clarity */
+    text-align: left; /* Align text */
+}
+
+.recipe-display p {
+    margin: 0 0 10px; /* Adjust spacing between paragraphs */
+    text-indent: 0; /* Remove unwanted indents */
+}
+
+.recipe-display h2 {
+    font-weight: bold; /* Make headings stand out */
+    margin-bottom: 10px; /* Space below heading */
+}
+
+.highlight {
+    font-weight: bold;
+    color: #007BFF;
+}
+
+/* Recipe Details Section */
+#recipeDetails {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#recipeDetails:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Recipe Content */
+#recipeContent {
+    display: block;                /* Ensure recipe content takes full width */
+    padding: 15px;                 /* Add padding for spacing */
+    border: 1px solid #ccc;        /* Optional: Add a border for structure */
+    border-radius: 8px;            /* Smooth edges for a cleaner look */
+    background-color: #fff;        /* White background to separate visually */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
+    margin-bottom: 15px;           /* Add space below the recipe block */
+}
+
+
+
+/* Button Container (for buttons below recipe content) */
+.button-container {
+    display: flex;                 /* Arrange buttons side by side */
+    justify-content: flex-start;   /* Align buttons to the left (or use center/space-between) */
+    gap: 10px;                     /* Add space between buttons */
+    margin-top: 10px;              /* Space between content and buttons */
+}
+
+/* Buttons */
+.button-container button {
+    flex-shrink: 0;                /* Prevent buttons from shrinking */
+    padding: 10px 15px;            /* Adjust button size */
+    font-size: 14px;               /* Match font size to the content */
+    border-radius: 5px;            /* Rounded corners */
+    cursor: pointer;               /* Pointer cursor for interactivity */
+    background-color: #007bff;     /* Default blue color */
+    color: white;
+    border: none;                  /* Remove default border */
+    transition: all 0.3s ease;     /* Smooth hover animation */
+}
+
+.button-container button:hover {
+    transform: translateY(-2px);   /* Slight hover effect */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Add shadow on hover */
+}
+
+.button-container .delete-button {
+    background-color: #dc3545;     /* Red for delete */
+}
+
+.button-container .delete-button:hover {
+    background-color: #a71d2a;     /* Darker red on hover */
+}
+
+
+
+input:invalid {
+    border-color: red;
+}
+
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+}
+
+/* Base Button Style */
+button {
+    padding: 10px 15px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #fff;
+    background-color: #32cd32; /* Default background color */
+}
+
+button:hover {
+    background-color: #228b22; /* Default hover color */
+}
+
+button:active {
+    transform: scale(0.98); /* Slight shrink effect on click */
+}
+
+
+#editRecipe {
+    background-color: #4d07ff; /* Amber */
+}
+
+#editRecipe:hover {
+    background-color: #4d07ff; /* Amber */
+}
+
+#deleteRecipe {
+    background-color: #ff4d4d; /* Red */
+}
+
+#deleteRecipe:hover {
+    background-color: #e60000; /* Darker red */
+}
+
+/* Add Ingredient Button */
+#addIngredient {
+    background-color: #007bff; /* Blue */
+}
+
+#addIngredient:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+/* Cancel Edit Button */
+#cancelEdit {
+    background-color: #ffc107; /* Amber */
+}
+
+#cancelEdit:hover {
+    background-color: #e0a800; /* Darker amber */
+}
+
+/* Save Changes Button */
+#saveChanges {
+    background-color: #007bff; /* Blue */
+}
+
+#saveChanges:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+/* Save Recipe Button */
+#saveRecipe {
+    background-color: #007bff; /* Blue */
+}
+
+#saveRecipe:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+.hidden {
+    display: none;
+}

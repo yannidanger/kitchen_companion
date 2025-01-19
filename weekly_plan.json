@@ -1,0 +1,17 @@
+{
+    "Monday": {
+        "Breakfast": "BRAISED SHORT RIBS",
+        "Lunch": "BEEF TENDERLOIN AU POIVRE",
+        "Dinner": "AGLIO E OLIO"
+    },
+    "Tuesday": {
+        "Breakfast": "CAST-IRON PAPRIKA CHICKEN",
+        "Lunch": "BEEF TENDERLOIN AU POIVRE",
+        "Dinner": "AGLIO E OLIO"
+    },
+    "Wednesday": {
+        "Breakfast": "CAST-IRON PAPRIKA CHICKEN",
+        "Lunch": "BRAISED SHORT RIBS",
+        "Dinner": "AGLIO E OLIO"
+    }
+}

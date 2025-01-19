@@ -1,0 +1,161 @@
+recipe name,ingredient number,quantity,unit,descriptor,name,optional,category
+Aglio E Olio,1,0.25,cups,Extra-Virgin,Olive Oil,No,Aisle 7: Condiments & Baking
+Aglio E Olio,2,12,cloves,Large,Garlic,No,Produce Section
+Aglio E Olio,3,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Aglio E Olio,4,0.5,teaspoons,Dried,Red Pepper Flakes,No,Aisle 7: Condiments & Baking
+Aglio E Olio,5,12,sprigs,Flat-Leaf,Parsley,No,Produce Section
+Aglio E Olio,6,1,juice of,Large,Lemon,No,Produce Section
+Aglio E Olio,7,1,pounds,,Spaghetti,No,"Aisle 8: Canned, Dry, Sauces"
+Aglio E Olio,8,1,blocks,Small,Pecorino Cheese,No,Deli
+Beef Tenderloin Au Poivre,1,4,,1½-inch-thick beef,Tenderloin Steaks,No,Meat Section
+Beef Tenderloin Au Poivre,2,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Beef Tenderloin Au Poivre,3,2,tablespoons,Coarsley Cracked,Black Pepper,No,Aisle 7: Condiments & Baking
+Beef Tenderloin Au Poivre,4,2,tablespoons,,Canola Oil,No,Aisle 7: Condiments & Baking
+Beef Tenderloin Au Poivre,5,2,cloves,Large,Garlic,No,Produce Section
+Beef Tenderloin Au Poivre,6,1,tablespoons,,Dijon Mustard,No,Aisle 7: Condiments & Baking
+Beef Tenderloin Au Poivre,7,1,tablespoons,,Worcestershire Sauce,No,Aisle 7: Condiments & Baking
+Beef Tenderloin Au Poivre,8,1,cups,,Beef Stock,No,Aisle 4: Soup
+Beef Tenderloin Au Poivre,9,,,"Maldon, Flaky",Sea Salt,No,Aisle 7: Condiments & Baking
+Braised Short Ribs,1,.25,cups,,Canola Oil,No,Aisle 7: Condiments & Baking
+Braised Short Ribs,2,2,pounds,"Boneless, Beef",Short Ribs,No,Meat Section
+Braised Short Ribs,3,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Braised Short Ribs,4,2,cups,Dry,Red Wine,No,Alcohol Section
+Braised Short Ribs,5,2,cups,,Pearl Onions,No,Produce Section
+Braised Short Ribs,6,6,cloves,Large,Garlic,No,Produce Section
+Braised Short Ribs,7,4,,Medium,Carrots,No,Produce Section
+Braised Short Ribs,8,4,cups,,Beef Stock,No,Aisle 4: Soup
+Braised Short Ribs,9,1,tablespoons,,Red Wine Vinegar,No,Aisle 7: Condiments & Baking
+Braised Short Ribs,10,1,tablespoons,,Dijon Mustard,No,Aisle 7: Condiments & Baking
+Classic Carbonara,1,6,ounces,,Pancetta,No,Deli
+Classic Carbonara,2,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Classic Carbonara,3,1,pounds,,Spaghetti,No,"Aisle 8: Canned, Dry, Sauces"
+Classic Carbonara,4,2,,Large,Eggs,No,Dairy Section
+Classic Carbonara,5,2,yolks,Large,Eggs,No,Dairy Section
+Classic Carbonara,6,1,cups,,Pecorino Cheese,No,Deli
+Classic Carbonara,7,,,,Black Pepper,No,Aisle 7: Condiments & Baking
+Classic Carbonara,8,2,teaspoons,,Red Wine Vinegar,No,Aisle 7: Condiments & Baking
+Cast-iron Paprika Chicken,1,2,,"boneless, skin-on",Chicken Breasts/Thighs,No,Meat Section
+Cast-iron Paprika Chicken,2,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Cast-iron Paprika Chicken,3,.5,teaspoons,"Sweet, Smoky, or Hot",Paprika,No,Aisle 7: Condiments & Baking
+Cast-iron Paprika Chicken,4,2,tablespoons,Extra-Virgin,Olive Oil,No,Aisle 7: Condiments & Baking
+Cast-iron Paprika Chicken,5,2,cloves,Large,Garlic,No,Produce Section
+Cast-iron Paprika Chicken,6,1,,Small,Yellow Onion,No,Produce Section
+Cast-iron Paprika Chicken,7,.5,pounds,,White Button Mushrooms,No,Produce Section
+Cast-iron Paprika Chicken,8,.5,cups,Dry,White Wine,No,Alcohol Section
+Cast-iron Paprika Chicken,9,1,zest of,Large,Lemon,No,Produce Section
+Dark Chocolate Cookies,1,3,tablespoons,,Unsalted Butter,No,Dairy Section
+Dark Chocolate Cookies,2,2.5,ounces,,Semisweet Chocolate,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,3,1.5,ounces,,Unsweetened Chocolate,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,4,1,,Large,Eggs,No,Dairy Section
+Dark Chocolate Cookies,5,1,cups,,Sugar,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,6,1,teaspoons,,Vanilla Extract,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,7,.25,cups,,All-Purpose Flour,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,8,.5,teaspoons,,Baking Powder,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,9,.33,cups,Dutch-processed,Cocoa Powder,No,Aisle 7: Condiments & Baking
+Dark Chocolate Cookies,10,1,teaspoons,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Eggless Chocolate Mousse,1,2,cups,,Heavy Cream,No,Dairy Section
+Eggless Chocolate Mousse,2,2,tablespoons,,Honey,No,Aisle 7: Condiments & Baking
+Eggless Chocolate Mousse,3,1.5,cups,,Semisweet Chocolate,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,1,3,cups,Full-fat,Buttermilk,No,Dairy Section
+Fluffy Beyond Pancakes,2,1,sticks,,Unsalted Butter,No,Dairy Section
+Fluffy Beyond Pancakes,3,2,teaspoons,,Vanilla Extract,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,4,2,teaspoons,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,5,2,yolks,Large,Eggs,No,Dairy Section
+Fluffy Beyond Pancakes,6,6,whites,Large,Eggs,No,Dairy Section
+Fluffy Beyond Pancakes,7,3,cups,,All-Purpose Flour,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,8,.5,cups,,Confectioners' Sugar,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,9,1,tablespoons,,Baking Powder,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,10,1,teaspoons,,Baking Powder,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,11,.5,teaspoons,,Cream Of Tartar,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,12,,,,NonStick Cooking Spray,No,Aisle 7: Condiments & Baking
+Fluffy Beyond Pancakes,13,,,Lots Of,Spiced Maple Syrup,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,1,.5,sticks,,Unsalted Butter,No,Dairy Section
+Frozen Peanut Butter Pie,2,1.5,cups,"Ground, Crumbs",Graham Crackers,No,Aisle 6: Candy
+Frozen Peanut Butter Pie,3,.25,cups,,Granulated Sugar,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,4,.5,teaspoons,Ground,Cinnamon,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,5,8,ounces,Full-fat,Cream Cheese,No,Dairy Section
+Frozen Peanut Butter Pie,6,.75,cups,,Confectioners' Sugar,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,7,1.5,teaspoons,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,8,1.5,cups,Smooth,Peanut Butter,No,"Aisle 12: Bread, Water & Snacks"
+Frozen Peanut Butter Pie,9,2,teaspoons,,Vanilla Extract,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,10,1,teaspoons,,Blackstrap Molasses,No,Aisle 7: Condiments & Baking
+Frozen Peanut Butter Pie,11,2,cups,,Heavy Cream,No,Dairy Section
+Frozen Peanut Butter Pie,12,1.5,cups,,Semisweet Chocolate Chips,No,Aisle 7: Condiments & Baking
+Gnocchi Macaroni + Cheese,1,3,cups,,Heavy Cream,No,Dairy Section
+Gnocchi Macaroni + Cheese,2,2,tablespoons,,Dijon Mustard,No,Aisle 7: Condiments & Baking
+Gnocchi Macaroni + Cheese,3,3.5,cups,Finely Grated,Gruyere Cheese,No,Deli
+Gnocchi Macaroni + Cheese,4,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Gnocchi Macaroni + Cheese,5,,,Freshly Ground,Black Pepper,No,Aisle 7: Condiments & Baking
+Gnocchi Macaroni + Cheese,6,1,cups,Finely Grated,Parmesean Cheese,No,Deli
+Gnocchi Macaroni + Cheese,7,1,teaspoons,,Worcestershire Sauce,No,Aisle 7: Condiments & Baking
+Gnocchi Macaroni + Cheese,8,1,teaspoons,,Tabasco,No,Aisle 7: Condiments & Baking
+Gnocchi Macaroni + Cheese,9,1,cloves,Large,Garlic,No,Produce Section
+Gnocchi Macaroni + Cheese,10,1,pounds,,Potato Gnocchi,No,"Aisle 8: Canned, Dry, Sauces"
+Gnocchi Macaroni + Cheese,11,2,tablespoons,,Unsalted Butter,No,Dairy Section
+Gnocchi Macaroni + Cheese,12,.5,cups,,Panko Breadcrumbs,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,1,4,tablespoons,Extra-Virgin,Olive Oil,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,2,1,tablespoons,,Red Wine Vinegar,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,3,1,tablespoons,Grainy,Dijon Mustard,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,4,1,tablespoons,Cool,Water,No,Produce Section
+Green Beans Amandine,5,1,teaspoons,Brined,Capers,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,6,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,7,,,Freshly Ground,Black Pepper,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,8,1,pounds,Preferrably Thin,Green Beans,No,Produce Section
+Green Beans Amandine,9,.5,cups,Sliced,Almonds,No,Aisle 7: Condiments & Baking
+Green Beans Amandine,10,2,tablespoons,,Unsalted Butter,No,Deli
+Homemade Ricotta,1,1,cups,,Heavy Cream,No,Deli
+Homemade Ricotta,2,.5,cups,,Whole Milk,No,Deli
+Homemade Ricotta,3,.5,cups,Full-fat,Buttermilk,No,Deli
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",1,1,cups,,Granulated Sugar,No,Aisle 7: Condiments & Baking
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",2,1,cups,,Heavy Cream,No,Dairy Section
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",3,1,tablespoons,,Vanilla Extract,No,Aisle 7: Condiments & Baking
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",4,1,teaspoons,,Kosher Salt,No,Aisle 7: Condiments & Baking
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",5,1,tablespoons,,Cornstarch,No,Aisle 7: Condiments & Baking
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",6,1,cups,Cold,Heavy Cream,No,Dairy Section
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",7,1,tablespoons,,Granulated Sugar,No,Aisle 7: Condiments & Baking
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",8,1,tablespoons,,Dark Brown Sugar,No,Aisle 7: Condiments & Baking
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",9,1,box,,Vanilla Wafer Cookies,No,Aisle 6: Candy
+"Layered ""Banoffee"" Banana Pudding Icebox Cake",10,4,,"Large, Ripe",Bananas,No,Produce Section
+Marinated Skirt Steak With Feta And Herbs,1,4,tablespoons,,Canola Oil,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,2,1.5,pounds,,Skirt Steak,No,Meat Section
+Marinated Skirt Steak With Feta And Herbs,3,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,4,2,tablespoons,,Worcestershire Sauce,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,5,1,tablespoons,,Dijon Mustard,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,6,1,cloves,Large,Garlic,No,Produce Section
+Marinated Skirt Steak With Feta And Herbs,7,2,sprigs,,Rosemary,No,Produce Section
+Marinated Skirt Steak With Feta And Herbs,8,2,tablespoons,,Red Wine Vinegar,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,9,2,tablespoons,Extra-Virgin,Olive Oil,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,10,2,teaspoons,,Dried Oregano,No,Aisle 7: Condiments & Baking
+Marinated Skirt Steak With Feta And Herbs,11,6,sprigs,Flat-Leaf,Parsley,No,Produce Section
+Marinated Skirt Steak With Feta And Herbs,12,4,ounces,Creamy,Feta Cheese,No,Deli
+Mozzarella Stick,1,3,tablespoons,Extra-Virgin,Olive Oil,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,2,4,cloves,Large,Garlic,No,Produce Section
+Mozzarella Stick,3,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,4,2,tablespoons,,Tomato Paste,No,"Aisle 8: Canned, Dry, Sauces"
+Mozzarella Stick,5,1,Can,,Whole Peeled Tomatoes,No,"Aisle 8: Canned, Dry, Sauces"
+Mozzarella Stick,6,2,teaspoons,,Sugar,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,7,.5,cups,,Heavy Cream,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,8,2,sprigs,,Basil,No,Produce Section
+Mozzarella Stick,9,4,,Large,Eggs,No,Dairy Section
+Mozzarella Stick,10,1.25,cups,,Panko Breadcrumbs,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,11,1,cups,Finely Grated,Parmesean Cheese,No,Deli
+Mozzarella Stick,12,2,tablespoons,,Dried Oregano,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,13,18,sticks,,Mozzarella String Cheese,No,"Aisle 14: Cheeses, Hotdogs, Frozen Meals"
+Mozzarella Stick,14,1,quasrt,,Canola Oil,No,Aisle 7: Condiments & Baking
+Mozzarella Stick,15,1.5,tablespoons,,Garlic Powder,No,Aisle 7: Condiments & Baking
+Mustardy Chicken Thighs,1,4,,"Large, Bone-in, Skin-on",Chicken Thighs,No,Meat Section
+Mustardy Chicken Thighs,2,2,tablespoons,,Dijon Mustard,No,Aisle 7: Condiments & Baking
+Mustardy Chicken Thighs,3,,,,Kosher Salt,No,Aisle 7: Condiments & Baking
+Mustardy Chicken Thighs,4,2,tablespoons,,Canola Oil,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,1,3,Pints,,Strawberries,No,Produce Section
+Pavlova With Strawberries,2,1,tablespoons,,Raspberry Jam,No,"Aisle 12: Bread, Water & Snacks"
+Pavlova With Strawberries,3,1,,1 tablespoon lemon zest and 2 tablespoons lemon juice,Lemon,No,Produce Section
+Pavlova With Strawberries,4,.25,cups,Packed,Dark Brown Sugar,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,5,,,,NonStick Cooking Spray,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,6,1,cups,,Granulated Sugar,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,7,2,teaspoons,,Cornstarch,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,8,4,whites,Large,Eggs,No,Dairy Section
+Pavlova With Strawberries,9,.25,teaspoons,,Cream Of Tartar,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,10,1.5,cups,,Heavy Cream,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,11,1,,,Vanilla Bean,No,Aisle 7: Condiments & Baking
+Pavlova With Strawberries,12,1,teaspoons,,Vanilla Extract,Yes,Aisle 7: Condiments & Baking

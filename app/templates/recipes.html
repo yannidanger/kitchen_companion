@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+    <nav>
+        <a href="/">Weekly Planner</a>
+    </nav>
+    <h1>Recipe Management</h1>
+
+    <!-- Dropdown to Select Recipes -->
+    <label for="recipeDropdown">Choose a Recipe:</label>
+    <select id="recipeDropdown">
+        <option value="">--Select a Recipe--</option>
+    </select>
+
+    <!-- Display Selected Recipe -->
+    <div id="recipeContent">
+        <!-- Recipe details -->
+        <div>
+            <p><strong>Beef Tenderloin Au Poivre</strong></p>
+        </div>
+    
+        <!-- Buttons below recipe -->
+        <div class="button-container">
+            <button id="editButton">Edit</button>
+            <button id="deleteButton" class="delete-button">Delete</button>
+        </div>
+    </div>
+    
+        
+
+    <!-- Recipe Input Form -->
+    <div id="recipe-form">
+        <h2>Add/Edit Recipe</h2>
+        <form id="add_recipe_form">
+            <label for="recipeName">Recipe Name:</label>
+            <input type="text" id="recipeName" name="name" required>
+
+            <label for="cookTime">Estimated Cook Time (minutes):</label>
+            <input type="number" id="cookTime" name="cook_time">
+
+            <label for="servings">Number of Servings:</label>
+            <input type="number" id="servings" name="servings">
+
+            <h3>Ingredients</h3>
+            <div id="ingredientsContainer"></div>
+            <button type="button" id="addIngredient">Add An Ingredient</button>
+
+            <label for="recipeInstructions">Instructions:</label>
+            <textarea id="recipeInstructions" name="instructions"></textarea>
+
+            <button type="button" id="cancelEdit" style="display: none;">Cancel</button>
+            <button type="submit" id="saveChanges" style="display: none;">Save Changes</button>
+            <button type="submit" id="saveRecipe">Save Recipe</button>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/recipes.js')}}"></script>
+</body>
+
+</html>

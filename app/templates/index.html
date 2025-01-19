@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Meal Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}">
+</head>
+
+<body>
+    <header>
+        <h1>Weekly Meal Planner</h1>
+        <a href="{{ url_for('recipes_routes.recipes') }}">Go to Recipe Page</a>
+    </header>
+
+    <main>
+        <section id="planner">
+            <h2>Plan Your Week</h2>
+            <form id="weekly-planner">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Breakfast</th>
+                            <th>Lunch</th>
+                            <th>Dinner</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Days and dropdowns will be dynamically populated -->
+                    </tbody>
+                </table>
+                <div class="actions">
+                    <button type="button" id="save-planner">Save Weekly Planner</button>
+                    <button type="button" id="generate-grocery-list">Generate Grocery List</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="grocery-list" style="display:none;">
+            <h2>Grocery List</h2>
+            <ul id="ingredients-list">
+                <!-- Generated grocery list will appear here -->
+            </ul>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/index.js')}}"></script>
+</body>
+
+</html>

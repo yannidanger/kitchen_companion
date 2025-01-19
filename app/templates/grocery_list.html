@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Grocery List</h1>
+        <a href="{{ url_for('recipes_routes.home') }}">
+            <button>Back to Meal Planner</button>
+        </a>
+        
+        <label>
+            <input type="checkbox" id="precision-mode-toggle">
+            Precision Mode
+        </label>
+    </header>
+</div>
+<div id="grocery-list-container"></div>
+</div>
+    <h2>Past Grocery Lists</h2>
+    <ul>
+        {% for plan in past_lists %}
+        <li>
+            <a href="/grocery/grocery_list?weekly_plan_id={{ plan.id }}">{{ plan.name }} ({{ plan.created_at }})</a>
+        </li>
+        {% endfor %}
+    </ul>
+    
+
+
+    <script src="{{ url_for('static', filename='js/grocery_list.js') }}"></script>
+</body>
+</html>
