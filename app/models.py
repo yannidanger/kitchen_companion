@@ -122,9 +122,14 @@ class Section(db.Model):
 class IngredientSection(db.Model):
     __tablename__ = 'ingredient_section'
     id = db.Column(db.Integer, primary_key=True)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=False)
-    section_id = db.Column(db.Integer, db.ForeignKey('section.id'), nullable=True)  # Null for untagged items
-    ingredient = db.relationship('Ingredient', backref='ingredient_sections')
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=False)  # Use 'ingredient'
+    section_id = db.Column(db.Integer, db.ForeignKey('section.id'), nullable=False)  # Already correct
+
+    # Define the relationship
+    section = db.relationship('Section', backref='ingredient_sections', lazy=True)
+    ingredient = db.relationship('Ingredient', backref='ingredient_sections', lazy=True)
+
+
 
 class User(db.Model):
     __tablename__ = 'user'
