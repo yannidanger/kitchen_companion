@@ -6,6 +6,8 @@ from app import db
 from app.utils import convert_to_base_unit
 from datetime import datetime
 from app.models import Store, Section, IngredientSection, Ingredient, Recipe, WeeklyPlan, MealSlot
+from collections import defaultdict
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -400,6 +402,30 @@ def save_and_generate_grocery_list():
         logger.info(f"Weekly plan '{weekly_plan.name}' saved successfully with ID: {weekly_plan.id}")
 
         ingredients = {}
+        # Add default sections to ensure uncategorized items get displayed correctly
+        categorized_ingredients = defaultdict(list)  # Use this to group by sections
+        for meal in weekly_plan.meals:
+            if meal.recipe_id:
+                recipe = Recipe.query.get(meal.recipe_id)
+                if recipe:
+                    for ingredient in recipe.ingredients:
+                        section_name = ingredient.section.name if ingredient.section else "Uncategorized"
+                        categorized_ingredients[section_name].append({
+                            "item_name": ingredient.item_name,
+                            "unit": ingredient.unit or "unitless",
+                            "quantity": ingredient.quantity or 0
+                        })
+
+        # Include default sections
+        for section in DEFAULT_SECTIONS:
+            if section not in categorized_ingredients:
+                categorized_ingredients[section] = []
+
+        categorized_ingredients = [
+            {"section": section, "items": categorized_ingredients[section]}
+            for section in DEFAULT_SECTIONS
+        ]
+
         for meal in weekly_plan.meals:
             if meal.recipe_id:
                 recipe = Recipe.query.get(meal.recipe_id)
@@ -438,9 +464,10 @@ def save_and_generate_grocery_list():
         return render_template(
             'grocery_list.html',
             weekly_plan=weekly_plan,
-            ingredients=formatted_ingredients,
+            ingredients=categorized_ingredients,  # Pass categorized ingredients with default sections
             past_lists=past_lists
         )
+
 
     except Exception as e:
         # Log the error and roll back any changes
@@ -542,30 +569,26 @@ def get_categorized_grocery_list():
         # Build the categorized list
         categorized_list = []
         for section in store.sections:
-            logger.info(f"Processing section: {section.name}")  # Add here
-            items = IngredientSection.query.filter_by(section_id=section.id).all()
-            logger.debug(f"Processing section '{section.name}' with {len(items)} items.")
-            if not items:
-                logger.warning(f"Section '{section.name}' has no items.")
-                continue
-            categorized_list = []
-        for section in store.sections:
             items = IngredientSection.query.filter_by(section_id=section.id).all()
             categorized_list.append({
-        'section': section.name,
-        'items': [
-            {
-                'name': item.ingredient.item_name if item.ingredient else 'Unknown Ingredient',
-                'quantity': item.ingredient.quantity if item.ingredient else 0,
-                'unit': item.ingredient.unit if item.ingredient else 'unitless'
-            }
-            for item in items if item.ingredient  # Only include valid ingredients
-        ]
-    })
+                'section': section.name,
+                'items': [
+                    {
+                        'name': item.ingredient.item_name if item.ingredient else 'Unknown Ingredient',
+                        'quantity': item.ingredient.quantity if item.ingredient else 0,
+                        'unit': item.ingredient.unit if item.ingredient else 'unitless'
+                    }
+                    for item in items if item.ingredient  # Only include valid ingredients
+                ]
+            })
 
-        
-        logger.info(f"Categorized grocery list: {categorized_list}")
-        return jsonify(categorized_list)
+        # Add missing default sections
+        for default_section in DEFAULT_SECTIONS:
+            if not any(category['section'] == default_section for category in categorized_list):
+                categorized_list.append({"section": default_section, "items": []})
+            
+            logger.info(f"Categorized grocery list: {categorized_list}")
+            return jsonify(categorized_list)
 
     except Exception as e:
         logger.error(f"Error generating categorized grocery list: {e}")
