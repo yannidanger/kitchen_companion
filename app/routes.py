@@ -409,7 +409,9 @@ def save_and_generate_grocery_list():
                 recipe = Recipe.query.get(meal.recipe_id)
                 if recipe:
                     for ingredient in recipe.ingredients:
-                        section_name = ingredient.section.name if ingredient.section else "Uncategorized"
+                        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient.id).first()
+                        section_name = ingredient_section.section.name if ingredient_section and ingredient_section.section else "Uncategorized"
+
                         categorized_ingredients[section_name].append({
                             "item_name": ingredient.item_name,
                             "unit": ingredient.unit or "unitless",
@@ -435,9 +437,12 @@ def save_and_generate_grocery_list():
                     for ingredient in recipe.ingredients:
                         # Validation: Check if ingredient data is valid
                         # Check if ingredient data is valid
-                        if not ingredient.item_name:
-                            logger.warning(f"Ingredient missing name: {ingredient.to_dict()}")
-                            continue  # Skip invalid entries
+                                        # Validation: Check if ingredient data is valid
+                        if not ingredient.item_name or ingredient.quantity is None or not ingredient.unit:
+                            ingredient.quantity = 0  # Default to 0 if quantity is missing
+                            ingredient.unit = ingredient.unit or "unitless"  # Default unit to "unitless"
+                            logger.warning(f"Missing fields in ingredient: {ingredient.to_dict()}")
+                            continue  # Skip invalid ingredients
                         
                         # Handle missing quantity and unit gracefully
                         quantity = ingredient.quantity or 0  # Default to 0 if missing
