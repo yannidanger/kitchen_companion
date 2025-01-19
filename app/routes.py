@@ -272,6 +272,7 @@ def get_recipe(recipe_id):
 def save_weekly_plan():
     """Save a new weekly meal plan."""
     try:
+        # Parse request data
         data = request.json
         name = data.get('name', f"My Weekly Plan ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
         meals = data.get('meals', [])
@@ -279,18 +280,24 @@ def save_weekly_plan():
         if not meals:
             return jsonify({"error": "No meals provided"}), 400
 
-        weekly_plan = WeeklyPlan(name=name)
+        # Create and save the weekly plan
+        weekly_plan = WeeklyPlan(name=name, created_at=datetime.utcnow())
         db.session.add(weekly_plan)
 
+        # Flush to assign an ID to the weekly_plan
+        db.session.flush()
+
+        # Associate meals with the weekly plan
         for meal in meals:
             meal_slot = MealSlot(
-                weekly_plan=weekly_plan,
+                weekly_plan_id=weekly_plan.id,  # Now `weekly_plan.id` is available
                 day=meal['day'],
                 meal_type=meal['meal_type'],
                 recipe_id=meal.get('recipe_id')
             )
             db.session.add(meal_slot)
 
+        # Commit all changes to the database
         db.session.commit()
 
         return jsonify({"message": "Weekly plan saved successfully", "id": weekly_plan.id}), 201
@@ -298,6 +305,8 @@ def save_weekly_plan():
     except Exception as e:
         logger.error(f"Error saving weekly plan: {e}")
         return jsonify({"error": "An error occurred while saving the plan"}), 500
+
+
 
 def normalize_unit(unit):
     """Normalize units based on unit categories."""

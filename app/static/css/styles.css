@@ -338,3 +338,11 @@ button:active {
 .hidden {
     display: none;
 }
+
+.grocery-item {
+    margin: 5px 0;
+}
+
+.precision-info.hidden {
+    display: none;
+}

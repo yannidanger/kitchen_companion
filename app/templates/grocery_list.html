@@ -12,15 +12,16 @@
         <a href="{{ url_for('recipes_routes.home') }}">
             <button>Back to Meal Planner</button>
         </a>
-        
-        <label>
-            <input type="checkbox" id="precision-mode-toggle">
-            Precision Mode
-        </label>
     </header>
-    <div id="grocery-list-container">
-        <p>Loading grocery list...</p> <!-- Placeholder for better user feedback -->
-    </div>
+    
+    <main>
+        <label>
+            <input type="checkbox" id="precision-mode-toggle"> Precision Mode
+        </label>
+        <div id="grocery-list-container">
+            <p>Loading grocery list...</p>
+        </div>
+    </main>
 
     <script src="{{ url_for('static', filename='js/grocery_list.js') }}"></script>
 </body>

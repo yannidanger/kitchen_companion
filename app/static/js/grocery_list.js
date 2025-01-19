@@ -1,68 +1,58 @@
 document.addEventListener('DOMContentLoaded', () => {
     const groceryListContainer = document.getElementById('grocery-list-container');
-    const groceryListElement = document.createElement('ul');
-    groceryListElement.id = 'grocery-list';
-    groceryListContainer.appendChild(groceryListElement);
+    const precisionToggle = document.getElementById('precision-mode-toggle');
 
-    const weeklyPlanId = new URLSearchParams(window.location.search).get('weekly_plan_id');
-    console.log('Weekly Plan ID:', weeklyPlanId);
-
-    if (weeklyPlanId) {
-        fetchGroceryList({ weekly_plan_id: weeklyPlanId });
-    } else {
-        groceryListContainer.innerHTML = '<p>No weekly plan selected. Please go back and choose one.</p>';
-    }
-
-    async function fetchGroceryList(data) {
+    // Fetch and render the grocery list
+    async function fetchAndRenderGroceryList(weeklyPlanId) {
         try {
-            const response = await fetch('/api/generate_grocery_list', {
+            const response = await fetch(`/api/generate_grocery_list`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify({ weekly_plan_id: selectedPlanId }),
             });
+            
 
-            if (!response.ok) {
-                throw new Error('Failed to generate the grocery list.');
-            }
+            if (!response.ok) throw new Error('Failed to fetch grocery list.');
 
-            const result = await response.json();
-
-            if (result.error) {
-                alert(result.error);
-                return;
-            }
-
-            renderGroceryList(result); // Call render with the fetched list
+            const data = await response.json();
+            // Ensure we work with data.grocery_list
+            renderGroceryList(data.grocery_list || []);
         } catch (error) {
-            console.error('Error fetching grocery list:', error);
-            groceryListContainer.innerHTML = '<p>Error loading grocery list. Please try again later.</p>';
+            console.error(error);
+            groceryListContainer.innerHTML = '<p>Error loading grocery list.</p>';
         }
     }
 
+    // Render the grocery list in the DOM
     function renderGroceryList(groceryList) {
-        groceryListElement.innerHTML = ''; // Clear the current list
+        groceryListContainer.innerHTML = ''; // Clear any existing content
 
-        if (!groceryList || groceryList.length === 0) {
-            groceryListElement.innerHTML = '<p>No items in the grocery list.</p>';
+        if (!groceryList.length) {
+            groceryListContainer.innerHTML = '<p>No items in the grocery list.</p>';
             return;
         }
 
-        // Render sections and their items
-        groceryList.forEach((section) => {
-            const sectionHeader = document.createElement('h3');
-            sectionHeader.textContent = section.section; // Add section name
-            groceryListElement.appendChild(sectionHeader);
-
-            const ul = document.createElement('ul');
-            section.items.forEach((item) => {
-                const li = document.createElement('li');
-                li.textContent = `${item.item_name}` + 
-                    (item.quantity ? ` - ${item.quantity} ${item.unit || ''}` : '');
-                ul.appendChild(li);
-            });
-            groceryListElement.appendChild(ul);
+        const ul = document.createElement('ul');
+        groceryList.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = `${item.item_name} ${item.quantity ? `(${item.quantity} ${item.unit || ''})` : ''}`;
+            ul.appendChild(li);
         });
+        groceryListContainer.appendChild(ul);
     }
+
+    // Initialize: Fetch the list for the selected weekly plan
+    const weeklyPlanId = new URLSearchParams(window.location.search).get('weekly_plan_id');
+    if (weeklyPlanId) {
+        fetchAndRenderGroceryList(weeklyPlanId);
+    } else {
+        groceryListContainer.innerHTML = '<p>No weekly plan selected. Please go back and choose one.</p>';
+    }
+
+    // Precision mode toggle
+    precisionToggle?.addEventListener('change', () => {
+        groceryListContainer.classList.toggle('precision-mode', precisionToggle.checked);
+    });
 });
