@@ -370,87 +370,32 @@ def list_weekly_plans():
 
 @meal_planner_routes.route('/api/generate_grocery_list', methods=['POST'])
 def save_and_generate_grocery_list():
-    """Save the weekly plan and generate the grocery list."""
+    """Generate the grocery list without saving the plan automatically."""
     try:
         # Extract data from the request
         data = request.json
         logger.debug(f"Received data: {data}")
 
         # Validate required fields
-        plan_name = data.get('name', f"My Weekly Plan ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
         meals = data.get('meals', [])
         if not meals:
             logger.warning("No meals provided in the request.")
             return jsonify({"error": "No meals provided"}), 400
 
-        # Save the weekly plan
-        weekly_plan = WeeklyPlan(name=plan_name)
-        db.session.add(weekly_plan)
-
-        # Save the associated meal slots
-        for meal in meals:
-            meal_slot = MealSlot(
-                weekly_plan=weekly_plan,
-                day=meal['day'],
-                meal_type=meal['meal_type'],
-                recipe_id=meal.get('recipe_id')
-            )
-            db.session.add(meal_slot)
-
-        # Commit changes to the database
-        db.session.commit()
-        logger.info(f"Weekly plan '{weekly_plan.name}' saved successfully with ID: {weekly_plan.id}")
-
+        # Generate the grocery list (without saving a weekly plan)
         ingredients = {}
-        # Add default sections to ensure uncategorized items get displayed correctly
-        categorized_ingredients = defaultdict(list)  # Use this to group by sections
-        for meal in weekly_plan.meals:
-            if meal.recipe_id:
-                recipe = Recipe.query.get(meal.recipe_id)
+        for meal in meals:
+            recipe_id = meal.get('recipe_id')
+            if recipe_id:
+                recipe = Recipe.query.get(recipe_id)
                 if recipe:
+                    logger.debug(f"Processing recipe: {recipe.name}")
                     for ingredient in recipe.ingredients:
-                        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient.id).first()
-                        section_name = ingredient_section.section.name if ingredient_section and ingredient_section.section else "Uncategorized"
-
-                        categorized_ingredients[section_name].append({
-                            "item_name": ingredient.item_name,
-                            "unit": ingredient.unit or "unitless",
-                            "quantity": ingredient.quantity or 0
-                        })
-
-        # Include default sections
-        for section in DEFAULT_SECTIONS:
-            if section not in categorized_ingredients:
-                categorized_ingredients[section] = []
-
-        categorized_ingredients = [
-            {"section": section, "items": categorized_ingredients[section]}
-            for section in DEFAULT_SECTIONS
-        ]
-
-        for meal in weekly_plan.meals:
-            if meal.recipe_id:
-                recipe = Recipe.query.get(meal.recipe_id)
-                if recipe:
-                    logger.debug(f"Processing recipe: {recipe.name}")  # Log recipe being processed
-                    
-                    for ingredient in recipe.ingredients:
-                        # Validation: Check if ingredient data is valid
-                        # Check if ingredient data is valid
-                                        # Validation: Check if ingredient data is valid
                         if not ingredient.item_name or ingredient.quantity is None or not ingredient.unit:
-                            ingredient.quantity = 0  # Default to 0 if quantity is missing
-                            ingredient.unit = ingredient.unit or "unitless"  # Default unit to "unitless"
-                            logger.warning(f"Missing fields in ingredient: {ingredient.to_dict()}")
-                            continue  # Skip invalid ingredients
-                        
-                        # Handle missing quantity and unit gracefully
-                        quantity = ingredient.quantity or 0  # Default to 0 if missing
-                        unit = ingredient.unit or "unitless"  # Default unit to "unitless"
-                        key = (ingredient.item_name, unit)
-
-                        # Aggregate quantity
-                        ingredients[key] = ingredients.get(key, 0) + quantity
+                            logger.warning(f"Invalid ingredient data: {ingredient.to_dict()}")
+                            continue
+                        key = (ingredient.item_name, ingredient.unit or "unitless")
+                        ingredients[key] = ingredients.get(key, 0) + (ingredient.quantity or 0)
 
         formatted_ingredients = [
             {"item_name": name, "unit": unit, "quantity": round(quantity, 2)}
@@ -458,27 +403,13 @@ def save_and_generate_grocery_list():
         ]
         logger.info(f"Generated grocery list: {formatted_ingredients}")
 
-        # Fetch past weekly plans for display
-        past_lists = WeeklyPlan.query.order_by(WeeklyPlan.created_at.desc()).all()
-        logger.debug(f"Fetched past weekly plans: {[plan.name for plan in past_lists]}")
-
-        logger.debug(f"Template context: weekly_plan={weekly_plan}, ingredients={formatted_ingredients}, past_lists={[plan.name for plan in past_lists]}")
-
-
-        # Render the grocery list template
-        return render_template(
-            'grocery_list.html',
-            weekly_plan=weekly_plan,
-            ingredients=categorized_ingredients,  # Pass categorized ingredients with default sections
-            past_lists=past_lists
-        )
-
+        # Pass the generated list back for rendering
+        return jsonify({"grocery_list": formatted_ingredients})
 
     except Exception as e:
-        # Log the error and roll back any changes
-        logger.error(f"Error saving or generating grocery list: {e}", exc_info=True)
-        db.session.rollback()
+        logger.error(f"Error generating grocery list: {e}", exc_info=True)
         return jsonify({"error": "An error occurred"}), 500
+
 
 @store_routes.route('/api/stores', methods=['POST'])
 def create_or_update_store():

@@ -21,17 +21,6 @@
     <div id="grocery-list-container">
         <p>Loading grocery list...</p> <!-- Placeholder for better user feedback -->
     </div>
-    
-    <h2>Past Grocery Lists</h2>
-    <ul>
-        {% for plan in past_lists %}
-        <li>
-            <a href="/grocery/grocery_list?weekly_plan_id={{ plan.id }}">{{ plan.name }} ({{ plan.created_at }})</a>
-        </li>
-        {% endfor %}
-    </ul>
-    
-
 
     <script src="{{ url_for('static', filename='js/grocery_list.js') }}"></script>
 </body>
