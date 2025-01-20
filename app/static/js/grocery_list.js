@@ -10,38 +10,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ weekly_plan_id: selectedPlanId }),
+                body: JSON.stringify({ weekly_plan_id: weeklyPlanId }),
             });
-            
-
+    
             if (!response.ok) throw new Error('Failed to fetch grocery list.');
-
+    
             const data = await response.json();
-            // Ensure we work with data.grocery_list
-            renderGroceryList(data.grocery_list || []);
+            console.log('Fetched grocery list:', data); // Add this
+            renderGroceryList(data.grocery_list);
         } catch (error) {
             console.error(error);
             groceryListContainer.innerHTML = '<p>Error loading grocery list.</p>';
         }
     }
+    
 
     // Render the grocery list in the DOM
     function renderGroceryList(groceryList) {
-        groceryListContainer.innerHTML = ''; // Clear any existing content
+        console.log('Grocery List:', groceryList);
+        console.log('Rendering grocery list:', groceryList);
 
+        const listContainer = document.getElementById('grocery-list-container');
+        listContainer.innerHTML = ''; // Clear existing content
+    
         if (!groceryList.length) {
-            groceryListContainer.innerHTML = '<p>No items in the grocery list.</p>';
+            listContainer.innerHTML = '<p>No items in the grocery list.</p>';
             return;
         }
-
+    
         const ul = document.createElement('ul');
         groceryList.forEach(item => {
             const li = document.createElement('li');
-            li.textContent = `${item.item_name} ${item.quantity ? `(${item.quantity} ${item.unit || ''})` : ''}`;
+            li.textContent = `${item.item_name} - ${item.quantity || ''} ${item.unit || ''}`.trim();
             ul.appendChild(li);
         });
-        groceryListContainer.appendChild(ul);
+    
+        listContainer.appendChild(ul);
     }
+    
 
     // Initialize: Fetch the list for the selected weekly plan
     const weeklyPlanId = new URLSearchParams(window.location.search).get('weekly_plan_id');
