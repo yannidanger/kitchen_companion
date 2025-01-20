@@ -112,50 +112,52 @@ function renderGroceryList(groceryList) {
 document.getElementById('generate-grocery-list').addEventListener('click', () => {
     const plannerData = {
         name: "My Weekly Plan",
-        meals: [
-            { day: "Monday", meal_type: "breakfast", recipe_id: 1 },
-            { day: "Monday", meal_type: "lunch", recipe_id: 2 },
-        ] // Replace with dynamic data if available
+        meals: [] // Dynamically populated
     };
 
+    const rows = document.querySelectorAll("#planner tbody tr");
+    rows.forEach(row => {
+        const day = row.cells[0].textContent; // First cell is the day
+        const mealTypes = ["breakfast", "lunch", "dinner"];
+
+        mealTypes.forEach((mealType, index) => {
+            const select = row.cells[index + 1].querySelector("select");
+            const recipeId = select.value;
+
+            if (recipeId) { // Only add if a recipe is selected
+                plannerData.meals.push({
+                    day,
+                    meal_type: mealType,
+                    recipe_id: parseInt(recipeId)
+                });
+            }
+        });
+    });
+
+    // Send plannerData to the backend
+    console.log('Sending plannerData:', plannerData);
+
     fetch('/api/generate_grocery_list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plannerData)
     })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Grocery List API Response:', data);
-            if (data.grocery_list) {
-                renderGroceryList(data.grocery_list);
-            } else {
-                console.error('Invalid response structure:', data);
-            }
-        })
-        .catch(error => console.error('Error generating grocery list:', error));
+    .then(response => response.json())
+    .then(data => {
+        console.log('Grocery List API Response:', data);
+        if (data.grocery_list) {
+            renderGroceryList(data.grocery_list);
+        } else {
+            console.error('Invalid response structure:', data);
+            alert('Failed to generate the grocery list.');
+        }
+    })
+    .catch(error => {
+        console.error('Error generating grocery list:', error);
+        alert('An error occurred while generating the grocery list.');
+    });
 });
 
-
-
-    // Send planner data to the backend
-    fetch('/api/generate_grocery_list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(plannerData)
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.grocery_list) {
-                renderGroceryList(data.grocery_list);
-            } else {
-                console.error('Invalid response structure:', data);
-                alert('Failed to generate the grocery list.');
-            }
-        })
-        .catch(error => {
-            console.error('Error generating grocery list:', error);
-            alert('Failed to generate the grocery list.');
-        });
 
 
 // Save the weekly planner

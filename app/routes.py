@@ -385,7 +385,10 @@ def save_and_generate_grocery_list():
     try:
         # Extract data from the request
         data = request.json
+        print(f"Received data for grocery list generation: {data}")
         logger.debug(f"Received data: {data}")
+        if not data or not data.get('meals'):
+            return jsonify({'error': 'No meals provided'}), 400
 
         # Validate required fields
         meals = data.get('meals', [])
