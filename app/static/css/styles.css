@@ -346,3 +346,18 @@ button:active {
 .precision-info.hidden {
     display: none;
 }
+
+#grocery-list {
+    display: block !important;
+}
+
+#ingredients-list {
+    display: block !important;
+    visibility: visible !important;
+    padding: 10px; /* Optional spacing for clarity */
+}
+
+.debug {
+    outline: 2px dashed red !important;
+    background-color: rgba(255, 0, 0, 0.1) !important;
+}

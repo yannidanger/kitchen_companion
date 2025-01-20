@@ -260,6 +260,8 @@ def home():
     print(f"Static CSS path: {os.path.join(current_app.static_folder, 'css/styles.css')}")
     return render_template('index.html')
 
+
+
 @recipes_routes.route('/api/recipes/<int:recipe_id>', methods=['GET'])
 def get_recipe(recipe_id):
     try:

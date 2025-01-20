@@ -37,16 +37,19 @@
                 </div>
             </form>
         </section>
+        <div id="debug-marker">Template Loaded: index.html</div>
 
-        <section id="grocery-list" style="display:none;">
-            <h2>Grocery List</h2>
-            <ul id="ingredients-list">
-                <!-- Generated grocery list will appear here -->
-            </ul>
+        <!-- Grocery List Section -->
+        <section id="grocery-list-section">
+            <div id="grocery-list-container">
+                <h2>Your Grocery List</h2>
+                <p>No grocery list generated yet.</p>
+            </div>
         </section>
     </main>
 
-    <script src="{{ url_for('static', filename='js/index.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
+
 </body>
 
 </html>

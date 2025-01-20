@@ -1,6 +1,9 @@
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Fetch recipes and populate dropdowns
+    const groceryListContainer = document.getElementById('grocery-list-container');
+    console.log('Grocery List Container on DOMContentLoaded:', groceryListContainer);
+    console.log('DOM Content:', document.body.innerHTML);
+    
+    // Fetch recipes and populate dropdowns for the weekly planner
     fetch('/api/recipes')
         .then(response => response.json())
         .then(data => {
@@ -50,55 +53,112 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => console.error('Error fetching recipes:', error));
 });
 
+// Fetch and render the grocery list
+async function fetchAndRenderGroceryList(weeklyPlanId) {
+    const groceryListContainer = document.getElementById('grocery-list-container');
+    try {
+        const response = await fetch(`/api/generate_grocery_list`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weekly_plan_id: weeklyPlanId }),
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch grocery list.');
+
+        const data = await response.json();
+        console.log('Fetched grocery list:', data);
+
+        if (!data.grocery_list || !Array.isArray(data.grocery_list)) {
+            throw new Error('Invalid grocery list structure received.');
+        }
+
+        renderGroceryList(data.grocery_list);
+    } catch (error) {
+        console.error('Error fetching grocery list:', error);
+        groceryListContainer.innerHTML = '<p>Error loading grocery list. Please try again later.</p>';
+        console.log('Grocery List Container:', document.getElementById('grocery-list-container'));
+
+    }
+}
+
+// Render the grocery list
+function renderGroceryList(groceryList) {
+    const groceryListContainer = document.getElementById('grocery-list-container');
+    if (!groceryListContainer) {
+        console.error('Error: #grocery-list-container is not found in the DOM.');
+        return;
+    }
+
+    groceryListContainer.innerHTML = '<h2>Your Grocery List</h2>';
+
+    if (!groceryList.length) {
+        groceryListContainer.innerHTML += '<p>No items in the grocery list.</p>';
+        return;
+    }
+
+    const ul = document.createElement('ul');
+    groceryList.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.item_name} - ${item.quantity || ''} ${item.unit || ''}`.trim();
+        ul.appendChild(li);
+    });
+
+    groceryListContainer.appendChild(ul);
+    console.log('Rendered Grocery List HTML:', groceryListContainer.innerHTML);
+}
+
+
+// Generate grocery list and render it on the same page
 document.getElementById('generate-grocery-list').addEventListener('click', () => {
     const plannerData = {
         name: "My Weekly Plan",
-        meals: []
+        meals: [
+            { day: "Monday", meal_type: "breakfast", recipe_id: 1 },
+            { day: "Monday", meal_type: "lunch", recipe_id: 2 },
+        ] // Replace with dynamic data if available
     };
 
-    const rows = document.querySelectorAll("#planner tbody tr");
-
-    rows.forEach(row => {
-        const day = row.cells[0].textContent;
-        const meals = ["breakfast", "lunch", "dinner"];
-
-        meals.forEach((meal, index) => {
-            const select = row.cells[index + 1].querySelector("select");
-            const recipeId = select.value;
-
-            if (recipeId) {
-                plannerData.meals.push({
-                    day,
-                    meal_type: meal,
-                    recipe_id: parseInt(recipeId)
-                });
-            }
-        });
-    });
-
-    // Send planner data to the backend and redirect
     fetch('/api/generate_grocery_list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plannerData)
     })
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            return response.text(); // Rendered HTML from server
+        .then(response => response.json())
+        .then(data => {
+            console.log('Grocery List API Response:', data);
+            if (data.grocery_list) {
+                renderGroceryList(data.grocery_list);
+            } else {
+                console.error('Invalid response structure:', data);
+            }
         })
-        .then(html => {
-            document.open();
-            document.write(html);
-            document.close();
+        .catch(error => console.error('Error generating grocery list:', error));
+});
+
+
+
+    // Send planner data to the backend
+    fetch('/api/generate_grocery_list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(plannerData)
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.grocery_list) {
+                renderGroceryList(data.grocery_list);
+            } else {
+                console.error('Invalid response structure:', data);
+                alert('Failed to generate the grocery list.');
+            }
         })
         .catch(error => {
             console.error('Error generating grocery list:', error);
             alert('Failed to generate the grocery list.');
         });
-});
 
 
-
+// Save the weekly planner
 document.getElementById('save-planner').addEventListener('click', () => {
     const plannerData = {
         name: "My Weekly Plan",
@@ -126,19 +186,12 @@ document.getElementById('save-planner').addEventListener('click', () => {
     });
 
     // Send planner data to the backend
-    console.log("Request URL: /api/weekly_plan");
     fetch('/api/weekly_plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plannerData)
     })
-
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.message) {
                 alert('Weekly plan saved successfully!');

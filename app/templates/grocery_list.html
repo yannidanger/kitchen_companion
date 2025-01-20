@@ -21,11 +21,22 @@
         <div id="grocery-list-container">
             <p>Loading grocery list...</p>
         </div>
-        
-        
+        <div id="ingredients-list">
+            <ul>
+                <li>Static Item 1</li>
+                <li>Static Item 2</li>
+            </ul>
+        </div>
     </main>
 
-    <script src="{{ url_for('static', filename='js/grocery_list.js') }}"></script>
+    <!-- Test Inline Script -->
+    <script>
+        console.log('Inline JavaScript is working!');
+    </script>
+
+    <!-- Hardcoded Script Path -->
+    <script src="/static/js/grocery_list.js" defer></script>
+
 
 </body>
 </html>
