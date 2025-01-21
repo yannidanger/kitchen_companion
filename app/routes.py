@@ -56,18 +56,47 @@ def format_grocery_list_with_default_sections(ingredients):
 def recipes():
     return render_template('recipes.html')
 
-@recipes_routes.route('/api/recipes', methods=['GET'])
-def get_recipes():
+def expand_ingredients(recipe_id):
+    """
+    Recursively expand ingredients for a recipe.
+    """
+    recipe = Recipe.query.get(recipe_id)
+    if not recipe:
+        raise ValueError(f"Recipe ID {recipe_id} not found")
+
+    expanded_ingredients = []
+    for ingredient in recipe.ingredients:
+        if Recipe.query.filter_by(name=ingredient.item_name).first():
+            # Ingredient is another recipe, expand it
+            sub_recipe = Recipe.query.filter_by(name=ingredient.item_name).first()
+            expanded_ingredients.extend(expand_ingredients(sub_recipe.id))
+        else:
+            expanded_ingredients.append({
+                "item_name": ingredient.item_name,
+                "quantity": ingredient.quantity,
+                "unit": ingredient.unit,
+                "descriptor": ingredient.descriptor,
+                "additional_descriptor": ingredient.additional_descriptor
+            })
+    return expanded_ingredients
+
+@recipes_routes.route('/api/recipes/<int:recipe_id>', methods=['GET'])
+def get_recipe(recipe_id):
+    """
+    Fetch a single recipe by its ID.
+    """
     try:
-        recipes = Recipe.query.all()
-        # Serialize each recipe and its ingredients
-        return jsonify([{
+        recipe = Recipe.query.get_or_404(recipe_id)  # Fetch recipe or return 404 if not found
+        return jsonify({
             **recipe.to_dict(),
             'ingredients': [ingredient.to_dict() for ingredient in recipe.ingredients]
-        } for recipe in recipes])
+        })
     except Exception as e:
-        logger.error(f"Error fetching recipes: {str(e)}")
+        logger.error(f"Error fetching recipe with ID {recipe_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+
 
 @recipes_routes.route('/api/recipes', methods=['POST'])
 def add_recipe():
@@ -259,16 +288,6 @@ def home():
     print(f"Template path: {os.path.join(current_app.template_folder, 'index.html')}")
     print(f"Static CSS path: {os.path.join(current_app.static_folder, 'css/styles.css')}")
     return render_template('index.html')
-
-
-
-@recipes_routes.route('/api/recipes/<int:recipe_id>', methods=['GET'])
-def get_recipe(recipe_id):
-    try:
-        recipe = Recipe.query.get_or_404(recipe_id)
-        return jsonify(recipe.to_dict())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @meal_planner_routes.route('/api/weekly_plan', methods=['POST'])
 def save_weekly_plan():
