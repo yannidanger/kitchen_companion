@@ -84,28 +84,21 @@ async function fetchAndRenderGroceryList(weeklyPlanId) {
 // Render the grocery list
 function renderGroceryList(groceryList) {
     const groceryListContainer = document.getElementById('grocery-list-container');
-    if (!groceryListContainer) {
-        console.error('Error: #grocery-list-container is not found in the DOM.');
-        return;
-    }
-
     groceryListContainer.innerHTML = '<h2>Your Grocery List</h2>';
-
     if (!groceryList.length) {
         groceryListContainer.innerHTML += '<p>No items in the grocery list.</p>';
         return;
     }
-
     const ul = document.createElement('ul');
     groceryList.forEach(item => {
         const li = document.createElement('li');
-        li.textContent = `${item.item_name} - ${item.quantity || ''} ${item.unit || ''}`.trim();
+        li.textContent = item.display;
         ul.appendChild(li);
     });
-
     groceryListContainer.appendChild(ul);
-    console.log('Rendered Grocery List HTML:', groceryListContainer.innerHTML);
 }
+
+
 
 
 document.getElementById('generate-grocery-list').addEventListener('click', () => {

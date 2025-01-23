@@ -394,7 +394,7 @@ def save_and_generate_grocery_list():
             return jsonify({"error": "No meals provided"}), 400
 
         # Generate the grocery list (without saving a weekly plan)
-        ingredients = {}
+        ingredients = []
         for meal in meals:
             recipe_id = meal.get('recipe_id')
             if recipe_id:
@@ -402,20 +402,26 @@ def save_and_generate_grocery_list():
                 if recipe:
                     logger.debug(f"Processing recipe: {recipe.name}")
                     for ingredient in recipe.ingredients:
-                        if not ingredient.item_name or ingredient.quantity is None or not ingredient.unit:
-                            logger.warning(f"Invalid ingredient data: {ingredient.to_dict()}")
+                        if not ingredient.item_name:
+                            logger.warning(f"Skipping ingredient with no name: {ingredient.to_dict()}")
                             continue
-                        key = (ingredient.item_name, ingredient.unit or "unitless")
-                        ingredients[key] = ingredients.get(key, 0) + (ingredient.quantity or 0)
 
-        formatted_ingredients = [
-            {"item_name": name, "unit": unit, "quantity": round(quantity, 2)}
-            for (name, unit), quantity in ingredients.items()
-        ]
-        logger.info(f"Generated grocery list: {formatted_ingredients}")
+                        # Handle quantity and unit
+                        quantity = ingredient.quantity or ""
+                        unit = ingredient.unit or ""
 
-        # Pass the generated list back for rendering
-        return jsonify({"grocery_list": formatted_ingredients})
+                        # Simplify the display to only include item name and quantity
+                        if not quantity:
+                            display_line = f"{ingredient.item_name.capitalize()} (as needed)"
+                        else:
+                            display_line = f"{ingredient.item_name.capitalize()} ({quantity} {unit or 'as needed'} needed this week)".strip()
+
+                        ingredients.append({"display": display_line})
+
+        logger.info(f"Generated grocery list: {ingredients}")
+
+        # Pass the formatted list back for rendering
+        return jsonify({"grocery_list": ingredients})
 
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}", exc_info=True)
