@@ -387,13 +387,11 @@ def save_and_generate_grocery_list():
         data = request.json
         logger.debug(f"Received data: {data}")
 
-        # Validate required fields
         meals = data.get('meals', [])
         if not meals:
             logger.warning("No meals provided in the request.")
             return jsonify({"error": "No meals provided"}), 400
 
-        # Generate the grocery list (without saving a weekly plan)
         ingredients = []
         for meal in meals:
             recipe_id = meal.get('recipe_id')
@@ -406,26 +404,31 @@ def save_and_generate_grocery_list():
                             logger.warning(f"Skipping ingredient with no name: {ingredient.to_dict()}")
                             continue
 
-                        # Handle quantity and unit
                         quantity = ingredient.quantity or ""
                         unit = ingredient.unit or ""
-
-                        # Simplify the display to only include item name and quantity
-                        if not quantity:
-                            display_line = f"{ingredient.item_name.capitalize()} (as needed)"
+                        if quantity and unit:
+                            precision_text = f"({quantity} {unit} needed this week)"
+                        elif quantity:
+                            precision_text = f"({quantity} needed this week)"
+                        elif unit:
+                            precision_text = f"(as needed)"
                         else:
-                            display_line = f"{ingredient.item_name.capitalize()} ({quantity} {unit or 'as needed'} needed this week)".strip()
+                            precision_text = "(as needed)"
 
-                        ingredients.append({"display": display_line})
+                        main_text = ingredient.item_name.capitalize()
+
+                        ingredients.append({
+                            "main_text": main_text,
+                            "precision_text": precision_text,
+                        })
 
         logger.info(f"Generated grocery list: {ingredients}")
-
-        # Pass the formatted list back for rendering
         return jsonify({"grocery_list": ingredients})
 
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}", exc_info=True)
         return jsonify({"error": "An error occurred"}), 500
+
 
 
 @store_routes.route('/api/stores', methods=['POST'])

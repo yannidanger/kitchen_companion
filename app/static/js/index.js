@@ -84,20 +84,40 @@ async function fetchAndRenderGroceryList(weeklyPlanId) {
 // Render the grocery list
 function renderGroceryList(groceryList) {
     const groceryListContainer = document.getElementById('grocery-list-container');
-    groceryListContainer.innerHTML = '<h2>Your Grocery List</h2>';
-    if (!groceryList.length) {
-        groceryListContainer.innerHTML += '<p>No items in the grocery list.</p>';
-        return;
-    }
-    const ul = document.createElement('ul');
-    groceryList.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item.display;
-        ul.appendChild(li);
-    });
-    groceryListContainer.appendChild(ul);
-}
+    groceryListContainer.innerHTML = `
+        <h2>Your Grocery List</h2>
+        <label>
+            <input type="checkbox" id="precision-mode-toggle"> Precision Mode
+        </label>
+        <ul id="grocery-list"></ul>
+    `;
 
+    const list = document.getElementById('grocery-list');
+
+    groceryList.forEach((item, index) => {
+        console.log(`Processing item at index ${index}:`, item);
+
+        const li = document.createElement('li');
+        const mainText = item.main_text || "Unknown Item";
+        const precisionText = item.precision_text || "";
+
+        li.innerHTML = `
+            <span class="main-text">${mainText}</span>
+            <span class="precision-text ${precisionText ? "" : "hidden"}">${precisionText}</span>
+        `;
+        list.appendChild(li);
+    });
+
+    const precisionToggle = document.getElementById('precision-mode-toggle');
+    precisionToggle.addEventListener('change', () => {
+        const precisionElements = document.querySelectorAll('.precision-text');
+        precisionElements.forEach(el => {
+            el.classList.toggle('hidden', !precisionToggle.checked);
+        });
+    });
+
+    precisionToggle.dispatchEvent(new Event('change'));
+}
 
 
 

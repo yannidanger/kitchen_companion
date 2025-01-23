@@ -361,3 +361,49 @@ button:active {
     outline: 2px dashed red !important;
     background-color: rgba(255, 0, 0, 0.1) !important;
 }
+
+.hidden {
+    display: none;
+}
+
+/* Grocery List Section */
+#grocery-list-section {
+    margin-top: 20px;
+}
+
+#grocery-list-container {
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#grocery-list {
+    list-style: none;
+    padding: 0;
+}
+
+#grocery-list li {
+    margin: 10px 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.main-text {
+    font-weight: bold;
+}
+
+.precision-text {
+    color: #666;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Toggle Switch for Precision Mode */
+#precision-mode-toggle {
+    margin: 10px 0;
+    cursor: pointer;
+}

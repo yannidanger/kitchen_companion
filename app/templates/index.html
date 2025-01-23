@@ -41,9 +41,13 @@
         <section id="grocery-list-section">
             <div id="grocery-list-container">
                 <h2>Your Grocery List</h2>
-                <p>No grocery list generated yet.</p>
+                <label>
+                    <input type="checkbox" id="precision-mode-toggle"> Precision Mode
+                </label>
+                <ul id="grocery-list"></ul>
             </div>
         </section>
+        
     </main>
 
     <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
