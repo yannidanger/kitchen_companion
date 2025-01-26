@@ -55,68 +55,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Fetch and render the grocery list
 async function fetchAndRenderGroceryList(weeklyPlanId) {
-    const groceryListContainer = document.getElementById('grocery-list-container');
     try {
-        const response = await fetch(`/api/generate_grocery_list`, {
+        const response = await fetch('/api/generate_grocery_list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ weekly_plan_id: weeklyPlanId }),
         });
 
-        if (!response.ok) throw new Error('Failed to fetch grocery list.');
-
         const data = await response.json();
-        console.log('Fetched grocery list:', data);
+        console.log("API Response:", data); // Debug: Log API response
 
         if (!data.grocery_list || !Array.isArray(data.grocery_list)) {
-            throw new Error('Invalid grocery list structure received.');
+            throw new Error('Invalid grocery list format.');
         }
 
         renderGroceryList(data.grocery_list);
     } catch (error) {
-        console.error('Error fetching grocery list:', error);
-        groceryListContainer.innerHTML = '<p>Error loading grocery list. Please try again later.</p>';
-        console.log('Grocery List Container:', document.getElementById('grocery-list-container'));
-
+        console.error('Error fetching or rendering grocery list:', error);
     }
 }
 
-// Render the grocery list
 function renderGroceryList(groceryList) {
-    const groceryListContainer = document.getElementById('grocery-list-container');
-    groceryListContainer.innerHTML = `
-        <h2>Your Grocery List</h2>
-        <label>
-            <input type="checkbox" id="precision-mode-toggle"> Precision Mode
-        </label>
-        <ul id="grocery-list"></ul>
-    `;
-
     const list = document.getElementById('grocery-list');
+    list.innerHTML = ''; // Clear previous list
 
-    groceryList.forEach((item, index) => {
-        console.log(`Processing item at index ${index}:`, item);
+    const isPrecisionMode = document.getElementById('precision-mode-toggle').checked;
 
-        const li = document.createElement('li');
-        const mainText = item.main_text || "Unknown Item";
-        const precisionText = item.precision_text || "";
+    // Save the grocery list in localStorage for dynamic re-rendering
+    localStorage.setItem('groceryList', JSON.stringify(groceryList));
 
-        li.innerHTML = `
-            <span class="main-text">${mainText}</span>
-            <span class="precision-text ${precisionText ? "" : "hidden"}">${precisionText}</span>
-        `;
-        list.appendChild(li);
-    });
+    groceryList.forEach(section => {
+        const sectionName = section.section || 'Uncategorized';
+        const items = Array.isArray(section.items) ? section.items : [];
 
-    const precisionToggle = document.getElementById('precision-mode-toggle');
-    precisionToggle.addEventListener('change', () => {
-        const precisionElements = document.querySelectorAll('.precision-text');
-        precisionElements.forEach(el => {
-            el.classList.toggle('hidden', !precisionToggle.checked);
+        // Create section header
+        const sectionHeader = document.createElement('li');
+        sectionHeader.className = 'section-header';
+        sectionHeader.textContent = sectionName;
+        list.appendChild(sectionHeader);
+
+        // Render section items
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = isPrecisionMode
+                ? `${item.main_text} ${item.precision_text}`
+                : item.main_text;
+            list.appendChild(li);
         });
     });
-
-    precisionToggle.dispatchEvent(new Event('change'));
 }
 
 
@@ -146,29 +132,33 @@ document.getElementById('generate-grocery-list').addEventListener('click', () =>
         });
     });
 
-    // Send plannerData to the backend
-    console.log('Sending plannerData:', plannerData);
+    console.log('Sending plannerData to backend:', plannerData); // Debug
 
+    // Send plannerData to the backend
     fetch('/api/generate_grocery_list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plannerData)
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Grocery List API Response:', data);
-        if (data.grocery_list) {
+        .then(response => response.json())
+        .then(data => {
+            console.log('Grocery List API Response:', data); // Debug
+
+            if (data.error) {
+                console.error('API Error:', data.error);
+                alert('Failed to generate the grocery list.');
+                return;
+            }
+
+            console.log('Rendering received grocery list:', data.grocery_list); // Debug
             renderGroceryList(data.grocery_list);
-        } else {
-            console.error('Invalid response structure:', data);
-            alert('Failed to generate the grocery list.');
-        }
-    })
-    .catch(error => {
-        console.error('Error generating grocery list:', error);
-        alert('An error occurred while generating the grocery list.');
-    });
+        })
+        .catch(error => {
+            console.error('Error fetching or rendering grocery list:', error);
+            alert('An error occurred while generating the grocery list.');
+        });
 });
+
 
 // Save the weekly planner
 document.getElementById('save-planner').addEventListener('click', () => {
@@ -215,4 +205,10 @@ document.getElementById('save-planner').addEventListener('click', () => {
             console.error('Error saving weekly plan:', error);
             alert('An error occurred while saving the weekly plan.');
         });
+});
+
+document.getElementById('precision-mode-toggle').addEventListener('change', () => {
+    // Re-render the grocery list when precision mode is toggled
+    const groceryList = JSON.parse(localStorage.getItem('groceryList')) || [];
+    renderGroceryList(groceryList);
 });

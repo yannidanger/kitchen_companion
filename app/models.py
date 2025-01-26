@@ -137,3 +137,13 @@ class User(db.Model):
     name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     stores = db.relationship('Store', backref='user', lazy=True)
+
+class StoreSection(db.Model):
+    __tablename__ = "store_sections"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    order = db.Column(db.Integer, nullable=False)
+
+    def __repr__(self):
+        return f"<StoreSection(name={self.name}, order={self.order})>"
+

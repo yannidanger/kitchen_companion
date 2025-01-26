@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Store Sections</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+    <input type="hidden" id="storeId" value="{{ store_id }}">
+    <nav>
+        <a href="/">Weekly Planner</a>
+        <a href="{{ url_for('recipes_routes.recipes') }}">Go to Recipe Page</a>
+    </nav>
+    <header>
+        <h1>Manage Store Sections</h1>
+        <a href="/">Back to Home</a>
+    </header>
+
+    <main>
+        <section>
+            <h2>Sections for {{ store_name }}</h2>
+            <table id="sectionsTable">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Section Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Sections will be dynamically populated -->
+                </tbody>
+            </table>
+
+            <button id="addSectionBtn">Add Section</button>
+
+            <!-- Add/Edit Section Modal -->
+            <div id="sectionModal" style="display: none;">
+                <form id="sectionForm">
+                    <label for="sectionName">Section Name:</label>
+                    <input type="text" id="sectionName" name="name" required>
+                    <input type="hidden" id="sectionId" name="id">
+                    <button type="submit">Save</button>
+                    <button type="button" id="cancelModal">Cancel</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/store_sections.js') }}"></script>
+</body>
+
+</html>

@@ -43,14 +43,18 @@ def format_grocery_list_with_default_sections(ingredients):
     from collections import defaultdict  # Ensure you have the import
     grouped = defaultdict(list)
     for item in ingredients:
-        section = item.get('section', 'Uncategorized') or 'Uncategorized'
+        section = item.get('section')
+        if not section or section not in DEFAULT_SECTIONS:
+            section = 'Uncategorized'
+        logger.debug(f"Item: {item}, Section: {section}")
         grouped[section].append(item)
 
     for section in DEFAULT_SECTIONS:
         if section not in grouped:
             grouped[section] = []
+    logger.debug(f"Formatted grocery list: {grouped}")
+    return [{"section": section, "items": grouped[section]} for section in DEFAULT_SECTIONS if section in grouped]
 
-    return [{"section": section, "items": grouped[section]} for section in grouped]
 
 @recipes_routes.route('/recipes', methods=['GET'])
 def recipes():
@@ -383,15 +387,19 @@ def list_weekly_plans():
 def save_and_generate_grocery_list():
     """Generate the grocery list without saving the plan automatically."""
     try:
+        logger.debug(f"Raw request data: {request.data}")
         # Extract data from the request
         data = request.json
-        logger.debug(f"Received data: {data}")
+        if not data:
+            raise ValueError("No data provided")
+        logger.debug(f"Parsed JSON data: {data}")
 
         meals = data.get('meals', [])
         if not meals:
             logger.warning("No meals provided in the request.")
             return jsonify({"error": "No meals provided"}), 400
 
+        # Collect ingredients from recipes
         ingredients = []
         for meal in meals:
             recipe_id = meal.get('recipe_id')
@@ -404,30 +412,24 @@ def save_and_generate_grocery_list():
                             logger.warning(f"Skipping ingredient with no name: {ingredient.to_dict()}")
                             continue
 
-                        quantity = ingredient.quantity or ""
-                        unit = ingredient.unit or ""
-                        if quantity and unit:
-                            precision_text = f"({quantity} {unit} needed this week)"
-                        elif quantity:
-                            precision_text = f"({quantity} needed this week)"
-                        elif unit:
-                            precision_text = f"(as needed)"
-                        else:
-                            precision_text = "(as needed)"
-
-                        main_text = ingredient.item_name.capitalize()
-
                         ingredients.append({
-                            "main_text": main_text,
-                            "precision_text": precision_text,
+                            "id": ingredient.id,  # Include the ingredient ID for section mapping
+                            "main_text": ingredient.item_name.capitalize(),
+                            "quantity": ingredient.quantity or "",
+                            "unit": ingredient.unit or "",
+                            "precision_text": f"({ingredient.quantity or 'as needed'} {ingredient.unit or ''})".strip()
                         })
 
-        logger.info(f"Generated grocery list: {ingredients}")
-        return jsonify({"grocery_list": ingredients})
+        # Map ingredients to sections
+        grocery_list = map_ingredients_to_sections(ingredients)
+        logger.info(f"Generated categorized grocery list: {grocery_list}")
+
+        return jsonify({"grocery_list": grocery_list})
 
     except Exception as e:
-        logger.error(f"Error generating grocery list: {e}", exc_info=True)
-        return jsonify({"error": "An error occurred"}), 500
+        logger.error(f"Error generating grocery list: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 
 
@@ -476,82 +478,50 @@ def delete_store(store_id):
     db.session.commit()
     return jsonify({'message': 'Store deleted successfully'})
 
-@ingredient_routes.route('/api/ingredients/<int:ingredient_id>/assign_section', methods=['POST'])
-def assign_section_to_ingredient(ingredient_id):
-    data = request.json
-    section_id = data.get('section_id')
-
-    # Assign section to ingredient
-    mapping = IngredientSection.query.filter_by(ingredient_id=ingredient_id).first()
-    if mapping:
-        mapping.section_id = section_id
-    else:
-        mapping = IngredientSection(ingredient_id=ingredient_id, section_id=section_id)
-        db.session.add(mapping)
-
-    db.session.commit()
-    return jsonify({'message': 'Ingredient assigned to section'})
-
-
 @grocery_routes.route('/api/grocery_list', methods=['GET'])
 def get_categorized_grocery_list():
-    """Return the categorized grocery list."""
     try:
         weekly_plan_id = request.args.get('weekly_plan_id')
-        logger.info(f"Received weekly_plan_id: {weekly_plan_id}")
 
         if not weekly_plan_id:
             return jsonify({'error': 'Weekly plan ID is required'}), 400
 
-        # Fetch the weekly plan
         weekly_plan = WeeklyPlan.query.get(weekly_plan_id)
-        logger.info(f"Weekly plan: {weekly_plan.name if weekly_plan else 'None'}")
+        logger.debug(f"Weekly Plan found: {weekly_plan}")
         if not weekly_plan:
-            logger.warning(f"Weekly plan not found for ID: {weekly_plan_id}")
             return jsonify({'error': 'Weekly plan not found'}), 404
 
-        if not weekly_plan.meals:
-            logger.warning(f"Weekly plan {weekly_plan_id} has no meals associated.")
-            return jsonify({'error': 'No meals in this weekly plan'}), 400
-
-        # Fetch the store
+        # Assuming default store if no store ID provided
         store_id = request.args.get('store_id')
         store = Store.query.get(store_id) if store_id else Store.query.filter_by(is_default=True).first()
-        logger.info(f"Store: {store.name if store else 'None'}")  # Add here
+
         if not store:
-            logger.warning(f"No store found. Store ID: {store_id}")
             return jsonify({'error': 'Store not found'}), 404
 
-        # Build the categorized list
+        sections = Section.query.filter_by(store_id=store.id).order_by(Section.order).all()
+        logger.debug(f"Store used for sections: {store.name}")
         categorized_list = []
-        for section in store.sections:
+
+        for section in sections:
+            logger.debug(f"Processing section: {section.name}")
             items = IngredientSection.query.filter_by(section_id=section.id).all()
+            logger.debug(f"Items in section {section.name}: {[item.ingredient.item_name for item in items if item.ingredient]}")
             categorized_list.append({
                 'section': section.name,
                 'items': [
                     {
-                        'name': item.ingredient.item_name if item.ingredient else 'Unknown Ingredient',
-                        'quantity': item.ingredient.quantity if item.ingredient else 0,
-                        'unit': item.ingredient.unit if item.ingredient else 'unitless'
-                    }
-                    for item in items if item.ingredient  # Only include valid ingredients
+                        'name': item.ingredient.item_name,
+                        'quantity': item.ingredient.quantity,
+                        'unit': item.ingredient.unit
+                    } for item in items if item.ingredient
                 ]
             })
-
-        # Add missing default sections
-        for default_section in DEFAULT_SECTIONS:
-            if not any(category['section'] == default_section for category in categorized_list):
-                categorized_list.append({"section": default_section, "items": []})
-            
-            logger.info(f"Categorized grocery list: {categorized_list}")
-            return jsonify(categorized_list)
+        logger.debug(f"Response being returned: {categorized_list}")
+        return jsonify({'grocery_list': categorized_list})
 
     except Exception as e:
-        logger.error(f"Error generating categorized grocery list: {e}")
+        logger.error(f"Error generating grocery list: {e}")
         return jsonify({"error": "An error occurred while generating the grocery list"}), 500
-
-
-
 
 
 @ingredient_routes.route('/api/ingredients', methods=['GET'])
@@ -629,3 +599,55 @@ def get_grocery_list_json():
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}")
         return jsonify({"error": "An error occurred while generating the grocery list"}), 500
+
+def map_ingredients_to_sections(ingredients):
+    """Map ingredients to their respective sections with precision data."""
+    sections = Section.query.order_by(Section.order).all()
+    section_dict = {section.name: [] for section in sections}
+
+    for ingredient in ingredients:
+        # Find the section for the ingredient
+        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient['id']).first()
+        if ingredient_section and ingredient_section.section_id:
+            section_name = Section.query.get(ingredient_section.section_id).name
+        else:
+            section_name = 'Uncategorized'
+
+        # Add ingredient with precision details
+        section_dict.setdefault(section_name, []).append({
+            "main_text": ingredient["main_text"],
+            "precision_text": ingredient["precision_text"],  # Ensure precision details are included
+        })
+
+    return [{"section": name, "items": items} for name, items in section_dict.items()]
+
+
+@ingredient_routes.route('/api/ingredients/<int:ingredient_id>/assign_section', methods=['POST'])
+def assign_section_to_ingredient(ingredient_id):
+    """Assign a section to an ingredient."""
+    try:
+        data = request.json
+        if not data or 'section_id' not in data:
+            return jsonify({"error": "Section ID is required"}), 400
+
+        section_id = data['section_id']
+        section = Section.query.get(section_id)
+        if not section:
+            return jsonify({"error": "Section not found"}), 404
+
+        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient_id).first()
+        if not ingredient_section:
+            # Create a new mapping if none exists
+            ingredient_section = IngredientSection(ingredient_id=ingredient_id, section_id=section_id)
+            db.session.add(ingredient_section)
+        else:
+            # Update the existing mapping
+            ingredient_section.section_id = section_id
+
+        db.session.commit()
+        return jsonify({"message": "Section assigned successfully", "ingredient_id": ingredient_id, "section_id": section_id})
+
+    except Exception as e:
+        logger.error(f"Error assigning section: {e}")
+        return jsonify({"error": str(e)}), 500
+
