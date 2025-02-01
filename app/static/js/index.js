@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const groceryListContainer = document.getElementById('grocery-list-container');
+    if (groceryListContainer) {
+        groceryListContainer.style.display = 'block';
+        groceryListContainer.style.visibility = 'visible';
+    }
+
     console.log('Grocery List Container on DOMContentLoaded:', groceryListContainer);
     console.log('DOM Content:', document.body.innerHTML);
     
@@ -75,36 +80,130 @@ async function fetchAndRenderGroceryList(weeklyPlanId) {
     }
 }
 
+let remapMode = false; // Track remap mode state
+
 function renderGroceryList(groceryList) {
     const list = document.getElementById('grocery-list');
     list.innerHTML = ''; // Clear previous list
-
-    const isPrecisionMode = document.getElementById('precision-mode-toggle').checked;
-
-    // Save the grocery list in localStorage for dynamic re-rendering
-    localStorage.setItem('groceryList', JSON.stringify(groceryList));
 
     groceryList.forEach(section => {
         const sectionName = section.section || 'Uncategorized';
         const items = Array.isArray(section.items) ? section.items : [];
 
         // Create section header
-        const sectionHeader = document.createElement('li');
+        const sectionHeader = document.createElement('div');
         sectionHeader.className = 'section-header';
         sectionHeader.textContent = sectionName;
         list.appendChild(sectionHeader);
 
-        // Render section items
+        // Add items to the section
         items.forEach(item => {
-            const li = document.createElement('li');
-            li.textContent = isPrecisionMode
-                ? `${item.main_text} ${item.precision_text}`
-                : item.main_text;
-            list.appendChild(li);
+            const itemRow = document.createElement('div');
+            itemRow.className = 'grocery-item-row';
+
+            // Create checkbox
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'grocery-checkbox';
+            checkbox.addEventListener('change', () => toggleStrikeout(itemRow, checkbox));
+
+            // Create main text
+            const mainText = document.createElement('span');
+            mainText.textContent = item.main_text;
+            mainText.className = 'grocery-text';
+
+            // Create precision text
+            const precisionText = document.createElement('span');
+            precisionText.textContent = ` ${item.precision_text || ''}`;
+            precisionText.className = 'precision-text';
+
+            // Append elements
+            itemRow.appendChild(checkbox);
+            itemRow.appendChild(mainText);
+            itemRow.appendChild(precisionText);
+
+            // Add row to the list
+            list.appendChild(itemRow);
         });
     });
+
+    togglePrecisionMode(); // Apply precision mode after rendering
 }
 
+
+// Function to enable remapping
+function enableRemap(element, item) {
+    if (!remapMode) return; // Only allow remapping when in remap mode
+
+    const dropdown = document.createElement('select');
+    dropdown.className = 'remap-dropdown';
+
+    const sections = [
+        "Pharmacy Section", "Bakery Section", "Deli", "Produce Section",
+        "Dairy Section", "Aisle 1: Breakfast Items", "Aisle 2: Baby Products",
+        "Aisle 3: Health & Beauty", "Aisle 4: Soup", "Aisle 5: Ethnic Foods",
+        "Aisle 6: Candy", "Aisle 7: Condiments & Baking", "Aisle 8: Canned, Dry, Sauces",
+        "Aisle 9: Pet Supplies, Magazines, Batteries", "Aisle 10: Cleaning Supplies",
+        "Aisle 11: Paper Goods", "Aisle 12: Bread, Water & Snacks",
+        "Aisle 13: Frozen Foods Section", "Seafood Section", "Meat Section",
+        "Aisle 14: Cheeses, Hotdogs, Frozen Meals", "Aisle 15: Dessert Aisle",
+        "Alcohol Section"
+    ];
+
+    // Populate dropdown options
+    sections.forEach(section => {
+        const option = document.createElement('option');
+        option.value = section;
+        option.textContent = section;
+        if (section === item.section) {
+            option.selected = true;
+        }
+        dropdown.appendChild(option);
+    });
+
+    // Replace the text element with dropdown
+    element.replaceWith(dropdown);
+
+    // Save new section when dropdown loses focus
+    dropdown.addEventListener('change', () => {
+        item.section = dropdown.value; // Update section in memory
+        dropdown.replaceWith(element);
+        element.textContent = item.section; // Update UI
+    });
+
+    dropdown.focus(); // Automatically focus dropdown
+}
+
+
+// Toggle Remap Mode
+function toggleRemapMode() {
+    remapMode = !remapMode;
+    document.getElementById('remap-mode-button').textContent = remapMode ? "Exit Remap Mode" : "Enter Remap Mode";
+
+    if (remapMode) {
+        document.querySelectorAll('.grocery-text').forEach(item => {
+            item.addEventListener('click', () => enableRemap(item, { section: item.textContent }));
+        });
+    }
+}
+
+
+// Save Remaps and Regenerate Grocery List
+function saveRemaps() {
+    remapMode = false;
+    document.getElementById('remap-mode-button').textContent = "Enter Remap Mode";
+    fetchAndRenderGroceryList(); // Regenerate list with new mappings
+}
+
+
+// Function to strike out checked items
+function toggleStrikeout(item, checkbox) {
+    if (checkbox.checked) {
+        item.classList.add('strikethrough');
+    } else {
+        item.classList.remove('strikethrough');
+    }
+}
 
 
 document.getElementById('generate-grocery-list').addEventListener('click', () => {
@@ -207,8 +306,19 @@ document.getElementById('save-planner').addEventListener('click', () => {
         });
 });
 
-document.getElementById('precision-mode-toggle').addEventListener('change', () => {
-    // Re-render the grocery list when precision mode is toggled
-    const groceryList = JSON.parse(localStorage.getItem('groceryList')) || [];
-    renderGroceryList(groceryList);
-});
+document.getElementById('precision-mode-toggle').addEventListener('change', togglePrecisionMode);
+function togglePrecisionMode() {
+    const precisionModeEnabled = document.getElementById('precision-mode-toggle').checked;
+    const precisionTexts = document.querySelectorAll('.precision-text');
+
+    precisionTexts.forEach(text => {
+        if (precisionModeEnabled) {
+            text.style.display = "inline"; // Show precision text
+        } else {
+            text.style.display = "none"; // Hide precision text
+        }
+    });
+}
+
+
+

@@ -39,6 +39,29 @@ DEFAULT_SECTIONS = [
     "Alcohol Section"
 ]
 
+# Define a fixed mapping of ingredients to store sections
+INGREDIENT_SECTION_MAPPING = {
+    "milk": "Dairy Section",
+    "cheese": "Dairy Section",
+    "butter": "Dairy Section",
+    "yogurt": "Dairy Section",
+    "eggs": "Dairy Section",
+    "bread": "Bakery Section",
+    "flour": "Aisle 7: Condiments & Baking",
+    "sugar": "Aisle 7: Condiments & Baking",
+    "salt": "Aisle 7: Condiments & Baking",
+    "pepper": "Aisle 7: Condiments & Baking",
+    "chicken": "Meat Section",
+    "beef": "Meat Section",
+    "fish": "Seafood Section",
+    "apple": "Produce Section",
+    "banana": "Produce Section",
+    "carrot": "Produce Section",
+    "lettuce": "Produce Section",
+    "potato": "Produce Section",
+}
+
+
 def format_grocery_list_with_default_sections(ingredients):
     from collections import defaultdict  # Ensure you have the import
     grouped = defaultdict(list)
@@ -601,25 +624,30 @@ def get_grocery_list_json():
         return jsonify({"error": "An error occurred while generating the grocery list"}), 500
 
 def map_ingredients_to_sections(ingredients):
-    """Map ingredients to their respective sections with precision data."""
-    sections = Section.query.order_by(Section.order).all()
-    section_dict = {section.name: [] for section in sections}
+    """Maps ingredients to store sections using SQLite instead of hardcoded values."""
+    sections = {section.id: section.name for section in Section.query.all()}
+    section_dict = {name: [] for name in sections.values()}
 
     for ingredient in ingredients:
-        # Find the section for the ingredient
-        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient['id']).first()
-        if ingredient_section and ingredient_section.section_id:
-            section_name = Section.query.get(ingredient_section.section_id).name
-        else:
-            section_name = 'Uncategorized'
+        ingredient_id = ingredient["id"]
 
-        # Add ingredient with precision details
+        # Fetch section from database
+        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient_id).first()
+
+        if ingredient_section:
+            section_name = sections.get(ingredient_section.section_id, "Uncategorized")
+        else:
+            section_name = "Uncategorized"
+
         section_dict.setdefault(section_name, []).append({
             "main_text": ingredient["main_text"],
-            "precision_text": ingredient["precision_text"],  # Ensure precision details are included
+            "precision_text": ingredient["precision_text"],
         })
 
     return [{"section": name, "items": items} for name, items in section_dict.items()]
+
+
+
 
 
 @ingredient_routes.route('/api/ingredients/<int:ingredient_id>/assign_section', methods=['POST'])

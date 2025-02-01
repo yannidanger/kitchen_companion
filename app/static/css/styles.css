@@ -371,13 +371,6 @@ button:active {
     margin-top: 20px;
 }
 
-#grocery-list-container {
-    padding: 15px;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
 
 #grocery-list {
     list-style: none;
@@ -406,4 +399,36 @@ button:active {
 #precision-mode-toggle {
     margin: 10px 0;
     cursor: pointer;
+}
+
+/* Section headers - Keep them bold */
+.section-header {
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-top: 15px;
+}
+
+/* Ingredient list - Proper indentation */
+.ingredient-list {
+    padding-left: 25px; /* Indent entire list */
+    margin-top: 5px;
+}
+
+/* Ensure ingredients appear indented but NOT bold */
+.ingredient-list li {
+    list-style-type: disc; /* Ensures bullet points */
+    margin-left: 15px; /* Further indent items */
+    font-weight: normal; /* Remove bold styling */
+}
+
+/* Precision text styling */
+.precision-text {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+/* Precision mode toggle visibility */
+.precision-text.hidden {
+    display: none;
 }

@@ -5,7 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Meal Planner</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/recipe.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/grocery-list.css') }}">
+
 </head>
 
 <body>
@@ -46,6 +50,11 @@
                 </label>
                 <ul id="grocery-list"></ul>
             </div>
+            <div id="remap-controls">
+                <button id="remap-mode-button" onclick="toggleRemapMode()">Enter Remap Mode</button>
+                <button onclick="saveRemaps()">Save Remaps</button>
+            </div>
+            
         </section>
         
     </main>

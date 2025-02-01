@@ -1,0 +1,115 @@
+/* Section headers */
+.section-header {
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #ccc;
+    text-align: left;
+}
+
+/* Ingredient list - Proper indentation */
+.ingredient-list {
+    padding-left: 25px; /* Indent entire list */
+    margin-top: 5px;
+}
+
+/* Ensure ingredients appear indented but NOT bold */
+.ingredient-list li {
+    list-style-type: disc;
+    margin-left: 15px;
+    font-weight: normal;
+}
+
+/* Text styling */
+.grocery-text {
+    font-size: 1rem;
+    font-weight: normal;
+    flex-grow: 1; /* Allow the text to fill available space */
+    text-align: left;
+    word-wrap: break-word; /* Handle long text gracefully */
+    white-space: nowrap; /* Prevent wrapping of main text */
+    overflow: hidden; /* Hide overflow for long text */
+    text-overflow: ellipsis; /* Add ellipsis for long text */
+}
+
+/* Precision text styling */
+.precision-text {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 5px;
+    display: inline; /* Ensure precision text is inline with main text */
+}
+
+/* When precision mode is active */
+.precision-text.active {
+    display: inline;
+}
+
+/* Strikethrough for checked items */
+.strikethrough {
+    text-decoration: line-through;
+    color: gray;
+}
+
+/* Checkbox styling */
+.grocery-checkbox {
+    margin: 0;
+    transform: scale(1.2); /* Slightly enlarge checkboxes */
+    flex-shrink: 0; /* Prevent resizing */
+    width: 30px; /* Explicit width for alignment */
+}
+
+/* Grocery item rows */
+.grocery-item-row {
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align items vertically */
+    gap: 10px; /* Space between checkbox and text */
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+#remap-controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+#remap-controls button {
+    padding: 10px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    transition: background-color 0.3s ease;
+}
+
+#remap-controls button:hover {
+    background-color: #0056b3;
+}
+
+/* Grocery list container */
+#grocery-list-container {
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: left; /* Align text inside the container */
+}
+
+/* Remove extra spacing from dropdown */
+.remap-dropdown {
+    margin-left: 10px;
+    font-size: 0.9em;
+    padding: 5px;
+}
+
+/* Optional: Add spacing between rows for better readability */
+.grocery-item-row + .grocery-item-row {
+    margin-top: 5px;
+}

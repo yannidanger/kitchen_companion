@@ -1,0 +1,29 @@
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+input,
+textarea,
+select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Ingredient Dropdowns */
+select[name="unit"],
+select[name="size"],
+select[name="recipe"] {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    padding: 5px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    width: 100%;
+}
