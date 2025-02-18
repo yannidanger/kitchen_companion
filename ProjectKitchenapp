@@ -1,0 +1,25 @@
+* [33m345f69e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mSamanthaEye[m[33m)[m 	modified:   SQLiteStuff/usda_data.db
+* [33m99052e1[m To Implement NESTRECIPES
+* [33m11147a0[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/database_utils.py 	modified:   app/models.py 	modified:   app/routes.py 	modified:   app/static/js/index.js 	new file:   app/static/js/store_sections.js 	new file:   app/templates/store_sections.html 	renamed:    usda_data_backup.db -> instance/default.db 	modified:   tester.py
+* [33m0811cea[m 	modified:   SQLiteStuff/usda_data.db
+* [33m6c18e60[m[33m ([m[1;31morigin/SamanthaEye[m[33m)[m PrecisionMode
+* [33ma5a10db[m[33m ([m[1;32mSamantha[m[33m)[m 	modified:   app/routes.py 	modified:   app/static/js/index.js
+* [33m376a29e[m 	modified:   SQLiteStuff/usda_data.db
+* [33ma967908[m[33m ([m[1;31morigin/Samantha[m[33m, [m[1;32mSamanthaPaw[m[33m)[m Set latest version of the code
+* [33m0395252[m[33m ([m[1;32mfeature/store-sections[m[33m)[m Set latest branch and delete other versions
+* [33m50e2084[m[33m ([m[1;31morigin/SamanthaPaw[m[33m)[m Paws
+[31m|[m * [33m98e8cfe[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/routes.py 	modified:   app/static/js/recipes.js
+[31m|[m * [33m7fce175[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/routes.py 	modified:   app/static/js/index.js 	modified:   app/templates/index.html
+[31m|[m[31m/[m  
+* [33mf56a99e[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/routes.py 	modified:   app/static/css/styles.css 	modified:   app/static/js/grocery_list.js 	modified:   app/static/js/index.js 	modified:   app/templates/grocery_list.html 	modified:   app/templates/index.html 	modified:   tester.py
+* [33m3702862[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/static/js/grocery_list.js 	modified:   app/templates/grocery_list.html
+* [33m5f6891b[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/models.py 	modified:   app/routes.py 	modified:   app/static/css/styles.css 	modified:   app/static/js/grocery_list.js 	modified:   app/templates/grocery_list.html 	new file:   migrations/versions/282b3d02ef25_updated_weeklyplan_and_mealslot_models.py
+* [33mddd1daf[m 	modified:   app/static/js/grocery_list.js
+* [33m3fb8f83[m 	modified:   app/routes.py 	modified:   app/static/js/grocery_list.js 	modified:   app/templates/grocery_list.html
+* [33m0b28d48[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/models.py 	new file:   migrations/versions/ce177499f19a_fix_ingredientsection_table_references.py
+* [33m5a2e7eb[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/routes.py
+* [33m6ec1785[m 	modified:   app/routes.py
+* [33mfad9d4a[m 	modified:   app/routes.py
+* [33m468f57e[m 	modified:   SQLiteStuff/usda_data.db
+* [33mee5babf[m 	modified:   SQLiteStuff/usda_data.db 	modified:   app/routes.py 	modified:   app/static/js/grocery_list.js 	modified:   app/templates/grocery_list.html 	modified:   SQLiteStuff/usda_data.db
+* [33m4b03402[m Initial commit
