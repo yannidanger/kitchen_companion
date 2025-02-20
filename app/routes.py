@@ -5,9 +5,12 @@ from app.utils import parse_ingredients  # Importing the missing function
 from app import db
 from app.utils import convert_to_base_unit
 from datetime import datetime
-from app.models import Store, Section, IngredientSection, Ingredient, Recipe, WeeklyPlan, MealSlot
+from app.models import Store, Section, IngredientSection, Ingredient, Recipe, WeeklyPlan, MealSlot, Recipe, RecipeComponent
 from collections import defaultdict
+from .models import db, Recipe, RecipeComponent
 
+
+sub_recipes_bp = Blueprint('sub_recipes', __name__, url_prefix='/api/sub_recipes')
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -679,3 +682,40 @@ def assign_section_to_ingredient(ingredient_id):
         logger.error(f"Error assigning section: {e}")
         return jsonify({"error": str(e)}), 500
 
+@sub_recipes_bp.route('/<int:recipe_id>', methods=['GET'])
+def get_sub_recipes(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    return jsonify([component.to_dict() for component in recipe.components])
+
+@sub_recipes_bp.route('/<int:recipe_id>', methods=['POST'])
+def add_sub_recipe(recipe_id):
+    data = request.json
+    print(f"Received Data: {data}")  # Debugging Line
+    
+    sub_recipe_id = data.get('sub_recipe_id')
+    quantity = data.get('quantity', 1)
+
+    if not sub_recipe_id:
+        return jsonify({'error': 'sub_recipe_id is required'}), 400
+
+    parent_recipe = Recipe.query.get_or_404(recipe_id)
+    sub_recipe = Recipe.query.get_or_404(sub_recipe_id)
+
+    new_component = RecipeComponent(
+    recipe_id=recipe_id,  # ✅ Use correct field name
+    sub_recipe_id=sub_recipe_id,
+    quantity=quantity
+)
+
+
+
+    db.session.add(new_component)
+    db.session.commit()
+    return jsonify(new_component.to_dict()), 201
+
+@sub_recipes_bp.route('/<int:recipe_id>/<int:sub_recipe_id>', methods=['DELETE'])
+def remove_sub_recipe(recipe_id, sub_recipe_id):
+    component = RecipeComponent.query.filter_by(recipe_id=recipe_id, sub_recipe_id=sub_recipe_id).first_or_404()
+    db.session.delete(component)
+    db.session.commit()
+    return jsonify({'message': 'Sub-recipe removed successfully'}), 200

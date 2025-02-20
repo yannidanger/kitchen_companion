@@ -20,8 +20,8 @@ def create_app():
                 static_folder=static_dir)
 
     # Database configuration
-    database_path = r"G:\\GroceriesProject\\Kitchenapp\\SQLiteStuff\\usda_data.db"  # Use raw string for Windows paths
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path}"
+    from config import Config
+    app.config.from_object(Config)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize extensions
@@ -39,6 +39,9 @@ def create_app():
     app.register_blueprint(ingredient_routes, url_prefix='/ingredients')
     from app.routes import grocery_routes
     app.register_blueprint(grocery_routes, url_prefix='/grocery')
+    from app.routes import sub_recipes_bp
+    app.register_blueprint(sub_recipes_bp)
+
 
 
     return app

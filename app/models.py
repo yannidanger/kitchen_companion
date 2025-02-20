@@ -5,54 +5,18 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-class Recipe(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    cook_time = db.Column(db.Integer, nullable=True)
-    servings = db.Column(db.Integer, nullable=True)
-    instructions = db.Column(db.Text, nullable=True)
-    ingredients = db.relationship(
-        'Ingredient', backref='recipe', lazy=True, cascade="all, delete-orphan"
-    )
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'cook_time': self.cook_time,
-            'servings': self.servings,
-            'instructions': self.instructions,
-            'ingredients': [ingredient.to_dict() for ingredient in self.ingredients],
-        }
-
 
 from fractions import Fraction
 
 class Ingredient(db.Model):
     __tablename__ = 'ingredient'
-
+    
     id = db.Column(db.Integer, primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
-    item_name = db.Column(db.String(100), nullable=False)
-    quantity = db.Column(db.Float, nullable=True)  # Allows NULL values
-    original_quantity = db.Column(db.String(50), nullable=True)  # Stores the original input
-    unit = db.Column(db.String(50), nullable=True)
-    size = db.Column(db.String(50), nullable=True)
-    descriptor = db.Column(db.String(100), nullable=True)
-    additional_descriptor = db.Column(db.String(100), nullable=True)
+    name = db.Column(db.String(100), nullable=False)
 
     def to_dict(self):
-        """Convert the Ingredient object into a dictionary."""
-        return {
-        'id': self.id,
-        'recipe_id': self.recipe_id,
-        'item_name': self.item_name,
-        'quantity': self.original_quantity,
-        'unit': self.unit,
-        'size': self.size,
-        'descriptor': self.descriptor,  # Return raw descriptor
-        'additional_descriptor': self.additional_descriptor  # Return raw additional descriptor
-    }
+        return {'id': self.id, 'name': self.name}
+    
 class Food(db.Model):
     __tablename__ = 'food'
 
@@ -146,4 +110,115 @@ class StoreSection(db.Model):
 
     def __repr__(self):
         return f"<StoreSection(name={self.name}, order={self.order})>"
+
+from sqlalchemy.orm import relationship
+
+from sqlalchemy.orm import relationship
+
+class RecipeComponent(db.Model):
+    __tablename__ = 'recipe_component'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    sub_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+
+    parent_recipe = db.relationship(
+        "Recipe",
+        foreign_keys=[recipe_id],
+        back_populates="components"
+    )
+
+    sub_recipe = db.relationship(
+        "Recipe",
+        foreign_keys=[sub_recipe_id],
+        back_populates="used_in_recipes"
+    )
+
+    def to_dict(self, depth=1):
+        """
+        Convert recipe component object to dictionary, preventing infinite recursion.
+        :param depth: Controls how deep the nesting should go.
+        """
+        if depth <= 0:
+            return {'id': self.id}  # Return minimal data to prevent recursion
+
+        return {
+            'id': self.id,
+            'sub_recipe': self.sub_recipe.to_dict(depth - 1) if self.sub_recipe else None,
+            'quantity': self.quantity
+        }
+
+
+
+
+
+class RecipeIngredient(db.Model):
+    __tablename__ = 'recipe_ingredient'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=False)
+    quantity = db.Column(db.Float)
+    unit = db.Column(db.String(50))
+
+    # ✅ Ensure RecipeIngredient is linked back to Recipe
+    recipe = db.relationship("Recipe", back_populates="ingredients")
+    ingredient = db.relationship("Ingredient")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'ingredient': self.ingredient.to_dict(),
+            'quantity': self.quantity,
+            'unit': self.unit
+        }
+
+    
+
+class Recipe(db.Model):
+    __tablename__ = 'recipe'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    cook_time = db.Column(db.Integer)
+    servings = db.Column(db.Integer)
+    instructions = db.Column(db.Text)
+
+    components = db.relationship(
+        "RecipeComponent",
+        foreign_keys="[RecipeComponent.recipe_id]",
+        back_populates="parent_recipe",
+        cascade="all, delete-orphan"
+    )
+
+    used_in_recipes = db.relationship(
+        "RecipeComponent",
+        foreign_keys="[RecipeComponent.sub_recipe_id]",
+        back_populates="sub_recipe",
+        cascade="all, delete-orphan"
+    )
+
+    ingredients = db.relationship("RecipeIngredient", back_populates="recipe")
+
+    def to_dict(self, depth=1):
+        """
+        Convert recipe object to dictionary, preventing infinite recursion.
+        :param depth: Controls how deep the nesting should go.
+        """
+        if depth <= 0:
+            return {'id': self.id, 'name': self.name}  # Return minimal data to prevent recursion
+
+        return {
+            'id': self.id,
+            'name': self.name,
+            'cook_time': self.cook_time,
+            'servings': self.servings,
+            'instructions': self.instructions,
+            'ingredients': [ri.to_dict() for ri in self.ingredients],
+            'components': [component.to_dict(depth - 1) for component in self.components],
+            'used_in_recipes': [component.to_dict(depth - 1) for component in self.used_in_recipes]
+        }
+
+
 
