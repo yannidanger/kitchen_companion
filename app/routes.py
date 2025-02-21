@@ -5,9 +5,11 @@ from app.utils import parse_ingredients  # Importing the missing function
 from app import db
 from app.utils import convert_to_base_unit
 from datetime import datetime
-from app.models import Store, Section, IngredientSection, Ingredient, Recipe, WeeklyPlan, MealSlot, Recipe, RecipeComponent
+from app.models import Store, Section, IngredientSection, Ingredient, Recipe, WeeklyPlan, MealSlot, Recipe, RecipeComponent, RecipeIngredient
+print("Recipe model is recognized:", Recipe)
 from collections import defaultdict
-from .models import db, Recipe, RecipeComponent
+from typing import Optional
+
 
 
 sub_recipes_bp = Blueprint('sub_recipes', __name__, url_prefix='/api/sub_recipes')
@@ -101,18 +103,25 @@ def get_recipes():
 
 @recipes_routes.route('/api/recipes', methods=['POST'])
 def add_recipe():
+    print("Pylance is analyzing the correct file")
     try:
         data = request.get_json()
         logger.debug(f"Received data: {data}")
 
-        # Check if this is an existing recipe
+        # ✅ Explicitly declare `new_recipe` before any conditions
+        new_recipe: Optional[Recipe] = None  
+
+        # 🔹 Check if updating an existing recipe
         recipe_id = data.get('id')
         if recipe_id:
-            new_recipe = Recipe.query.get(recipe_id)
-            if not new_recipe:
+            existing_recipe = Recipe.query.get(recipe_id)
+            if existing_recipe:
+                new_recipe = existing_recipe
+            else:
                 return jsonify({'error': 'Recipe not found'}), 404
-        else:
-            # Create a new recipe
+
+        # 🔹 If `new_recipe` is still None, create a new one
+        if new_recipe is None:
             new_recipe = Recipe(
                 name=data['name'],
                 cook_time=int(data['cook_time']) if data['cook_time'] else None,
@@ -120,67 +129,53 @@ def add_recipe():
                 instructions=data['instructions']
             )
             db.session.add(new_recipe)
+            db.session.flush()  # ✅ Ensures `new_recipe.id` exists
 
-        # Update recipe fields
-        new_recipe.name = data['name']
-        new_recipe.cook_time = int(data['cook_time']) if data['cook_time'] else None
-        new_recipe.servings = int(data['servings']) if data['servings'] else None
-        new_recipe.instructions = data['instructions']
 
-        # Handle ingredients
+        # ✅ Ensure `new_recipe` exists before using it
+        if new_recipe is None or not new_recipe.id:
+            return jsonify({'error': 'Recipe creation failed'}), 500
+
+        # 🔹 Handle ingredients
         if 'ingredients' in data and data['ingredients']:
-            # Track ingredient IDs that were updated or added
             updated_ingredient_ids = []
-
             for ingredient_data in data['ingredients']:
-                ingredient_id = ingredient_data.get('id')
-                if ingredient_id:
-                    # Update existing ingredient
-                    ingredient = Ingredient.query.get(ingredient_id)
-                    if ingredient:
-                        ingredient.item_name = ingredient_data['item_name']
-                        ingredient.quantity = float(Fraction(ingredient_data['quantity'])) if ingredient_data['quantity'] else None
-                        ingredient.original_quantity = ingredient_data.get('quantity', '')
-                        ingredient.unit = ingredient_data.get('unit', '')
-                        ingredient.size = ingredient_data.get('size', '')
-                        ingredient.descriptor = ingredient_data.get('descriptor', '')
-                        ingredient.additional_descriptor = ingredient_data.get('additional_descriptor', '')
-                        updated_ingredient_ids.append(ingredient.id)
-                else:
-                    # Add new ingredient
-                    ingredient = Ingredient(
-                        recipe=new_recipe,
-                        item_name=ingredient_data['item_name'],
-                        quantity=float(Fraction(ingredient_data['quantity'])) if ingredient_data['quantity'] else None,
-                        original_quantity=ingredient_data.get('quantity', ''),
-                        unit=ingredient_data.get('unit', ''),
-                        size=ingredient_data.get('size', ''),
-                        descriptor=ingredient_data.get('descriptor', ''),
-                        additional_descriptor=ingredient_data.get('additional_descriptor', '')
-                    )
-                    db.session.add(ingredient)
-                    db.session.flush()  # Ensure we get the ID of the new ingredient
-                    updated_ingredient_ids.append(ingredient.id)
+                ingredient_name = ingredient_data['item_name']
+                existing_ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
 
-            # Remove ingredients that are no longer part of the recipe
-            Ingredient.query.filter(
-                Ingredient.recipe_id == new_recipe.id,
-                ~Ingredient.id.in_(updated_ingredient_ids)
+                if not existing_ingredient:
+                    existing_ingredient = Ingredient(name=ingredient_name)
+                    db.session.add(existing_ingredient)
+                    db.session.flush()
+
+                recipe_ingredient = RecipeIngredient(
+                    recipe_id=new_recipe.id,  # ✅ `new_recipe` is now always defined
+                    ingredient_id=existing_ingredient.id,
+                    quantity=float(Fraction(ingredient_data['quantity'])) if ingredient_data['quantity'] else None,
+                    unit=ingredient_data.get('unit', '')
+                )
+                db.session.add(recipe_ingredient)
+                updated_ingredient_ids.append(existing_ingredient.id)
+
+            # ✅ Remove ingredients that are no longer part of the recipe
+            RecipeIngredient.query.filter(
+                RecipeIngredient.recipe_id == new_recipe.id,
+                ~RecipeIngredient.ingredient_id.in_(updated_ingredient_ids)
             ).delete(synchronize_session=False)
 
-        # Commit changes
+        # 🔹 Save everything
         db.session.commit()
         logger.info(f"Recipe saved successfully: {new_recipe}")
+
         return jsonify({
             **new_recipe.to_dict(),
-            'ingredients': [ingredient.to_dict() for ingredient in new_recipe.ingredients]
+            'ingredients': [ri.to_dict() for ri in new_recipe.ingredients]
         }), 201
 
     except Exception as e:
         logger.error(f"Error saving recipe: {str(e)}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
 
 
 
@@ -235,17 +230,24 @@ def update_recipe(recipe_id):
                     updated_ingredient_ids.append(ingredient.id)
             else:
                 logger.debug("New ingredient, no ID provided.")
-                ingredient = Ingredient(
-                    recipe=recipe,
-                    item_name=ingredient_data['item_name'],
+                # Ensure the ingredient exists
+                ingredient_name = ingredient_data['item_name']
+                existing_ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+
+                if not existing_ingredient:
+                    existing_ingredient = Ingredient(name=ingredient_name)
+                    db.session.add(existing_ingredient)
+                    db.session.flush()  # Ensure ingredient ID is available
+
+                # ✅ Now, properly link the ingredient to the recipe using RecipeIngredient
+                recipe_ingredient = RecipeIngredient(
+                    recipe_id=recipe.id,
+                    ingredient_id=existing_ingredient.id,
                     quantity=float(Fraction(ingredient_data['quantity'])) if ingredient_data['quantity'] else None,
-                    original_quantity=ingredient_data.get('quantity', ''),
-                    unit=ingredient_data.get('unit', ''),
-                    size=ingredient_data.get('size', ''),
-                    descriptor=ingredient_data.get('descriptor', ''),
-                    additional_descriptor=ingredient_data.get('additional_descriptor', '')
+                    unit=ingredient_data.get('unit', '')
                 )
-                db.session.add(ingredient)
+                db.session.add(recipe_ingredient)
+
                 db.session.flush()
                 updated_ingredient_ids.append(ingredient.id)
 
@@ -719,3 +721,5 @@ def remove_sub_recipe(recipe_id, sub_recipe_id):
     db.session.delete(component)
     db.session.commit()
     return jsonify({'message': 'Sub-recipe removed successfully'}), 200
+
+

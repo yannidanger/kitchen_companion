@@ -3,7 +3,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
-
+from flask_cors import CORS
 
 # Initialize extensions globally
 db = SQLAlchemy()
@@ -18,7 +18,7 @@ def create_app():
     app = Flask(__name__,
                 template_folder=template_dir,
                 static_folder=static_dir)
-
+    CORS(app)
     # Database configuration
     from config import Config
     app.config.from_object(Config)
@@ -40,8 +40,9 @@ def create_app():
     from app.routes import grocery_routes
     app.register_blueprint(grocery_routes, url_prefix='/grocery')
     from app.routes import sub_recipes_bp
+    print("Registering sub_recipes_bp...")
     app.register_blueprint(sub_recipes_bp)
-
+    print("sub_recipes_bp registered successfully.")
 
 
     return app

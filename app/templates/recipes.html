@@ -24,19 +24,15 @@
 
     <!-- Display Selected Recipe -->
     <div id="recipeContent">
-        <!-- Recipe details -->
-        <div>
-            <p><strong>Beef Tenderloin Au Poivre</strong></p>
-        </div>
-    
+
         <!-- Buttons below recipe -->
         <div class="button-container">
             <button id="editButton">Edit</button>
             <button id="deleteButton" class="delete-button">Delete</button>
         </div>
     </div>
-    
-        
+
+
 
     <!-- Recipe Input Form -->
     <div id="recipe-form">
@@ -57,6 +53,15 @@
 
             <label for="recipeInstructions">Instructions:</label>
             <textarea id="recipeInstructions" name="instructions"></textarea>
+
+            <h3>Add Sub-Recipe</h3>
+            <label for="subRecipeDropdown">Choose a Sub-Recipe:</label>
+            <select id="subRecipeDropdown">
+                <option value="">--Select a Recipe--</option>
+            </select>
+            <button type="button" id="addSubRecipe">Add Sub-Recipe</button>
+            <ul id="subRecipeList"></ul>
+
 
             <button type="button" id="cancelEdit" style="display: none;">Cancel</button>
             <button type="submit" id="saveChanges" style="display: none;">Save Changes</button>
