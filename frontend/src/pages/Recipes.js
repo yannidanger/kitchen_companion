@@ -205,45 +205,51 @@ function Recipes() {
       <h1>Recipes</h1>
       <label htmlFor="recipeDropdown">Choose a Recipe:</label>
       <h2>{editingRecipeId ? "Edit Recipe" : "Add a New Recipe"}</h2>
-<form onSubmit={handleFormSubmit}>
-  <input
-    type="text"
-    name="name"
-    placeholder="Recipe Name"
-    value={recipeForm.name}
-    onChange={handleInputChange}
-    required
-  />
-  <input
-    type="number"
-    name="cook_time"
-    placeholder="Cook Time (minutes)"
-    value={recipeForm.cook_time}
-    onChange={handleInputChange}
-  />
-  <input
-    type="number"
-    name="servings"
-    placeholder="Servings"
-    value={recipeForm.servings}
-    onChange={handleInputChange}
-  />
+      <form onSubmit={handleFormSubmit} className="recipe-form">
+  <div className="form-row">
+    <input
+      type="text"
+      name="name"
+      placeholder="Recipe Name"
+      value={recipeForm.name}
+      onChange={handleInputChange}
+      required
+    />
+    <input
+      type="number"
+      name="cook_time"
+      placeholder="Cook Time (minutes)"
+      value={recipeForm.cook_time}
+      onChange={handleInputChange}
+    />
+    <input
+      type="number"
+      name="servings"
+      placeholder="Servings"
+      value={recipeForm.servings}
+      onChange={handleInputChange}
+    />
+  </div>
+
   <h3>Ingredients</h3>
+  <div className="ingredient-list">
   {recipeForm.ingredients.map((ingredient, index) => (
-  <div key={index} style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+  <div key={index} className="ingredient-row">
+    {/* Quantity Input */}
     <input
       type="text"
       placeholder="Quantity"
       value={ingredient.quantity}
       onChange={(e) => handleIngredientChange(index, "quantity", e.target.value)}
     />
+
+    {/* Unit Dropdown */}
     <select
       value={ingredient.unit}
       onChange={(e) => handleIngredientChange(index, "unit", e.target.value)}
     >
       <option value="">Unit</option>
-
-        <optgroup label="Volume">
+      <optgroup label="Volume">
         <option value="tsp">Teaspoon</option>
         <option value="tbsp">Tablespoon</option>
         <option value="fl_oz">Fluid Ounce</option>
@@ -254,47 +260,28 @@ function Recipes() {
         <option value="ml">Milliliter</option>
         <option value="l">Liter</option>
         <option value="dl">Deciliter</option>
-        </optgroup>
-
-        <optgroup label="Weight">
+      </optgroup>
+      <optgroup label="Weight">
         <option value="oz">Ounce</option>
         <option value="lb">Pound</option>
         <option value="g">Gram</option>
         <option value="kg">Kilogram</option>
         <option value="mg">Milligram</option>
-        </optgroup>
-
-        <optgroup label="Count-Based">
+      </optgroup>
+      <optgroup label="Count-Based">
         <option value="piece">Piece</option>
         <option value="dozen">Dozen</option>
         <option value="whole">Whole</option>
-        </optgroup>
-
-        <optgroup label="Small & Approximate">
-        <option value="dash">Dash</option>
-        <option value="pinch">Pinch</option>
-        <option value="smidgen">Smidgen</option>
-        <option value="drop">Drop</option>
-        </optgroup>
-
-        <optgroup label="Natural">
-        <option value="handful">Handful</option>
-        <option value="clove">Clove</option>
-        <option value="sprig">Sprig</option>
-        <option value="slice">Slice</option>
-        <option value="juice_of">Juice Of</option>
-        <option value="zest_of">Zest Of</option>
-        </optgroup>
-
-        <optgroup label="Specialty & Packaging Based">
+      </optgroup>
+      <optgroup label="Specialty">
         <option value="can">Can</option>
         <option value="packet">Packet</option>
         <option value="stick">Stick</option>
         <option value="block">Block</option>
-        </optgroup>
-
-
+      </optgroup>
     </select>
+
+    {/* Size Dropdown */}
     <select
       value={ingredient.size}
       onChange={(e) => handleIngredientChange(index, "size", e.target.value)}
@@ -304,55 +291,66 @@ function Recipes() {
       <option value="medium">Medium</option>
       <option value="large">Large</option>
     </select>
+
+    {/* Descriptor Input */}
     <input
       type="text"
       placeholder="Descriptor (e.g., diced, fresh)"
       value={ingredient.descriptor}
       onChange={(e) => handleIngredientChange(index, "descriptor", e.target.value)}
     />
+
+    {/* Item Name Input */}
     <input
-        type="text"
-        placeholder="Item Name (required)"
-        value={ingredient.item_name}
-        onChange={(e) => handleIngredientChange(index, "item_name", e.target.value)}
-        required
+      type="text"
+      placeholder="Item Name (required)"
+      value={ingredient.item_name}
+      onChange={(e) => handleIngredientChange(index, "item_name", e.target.value)}
+      required
     />
 
+    {/* Additional Descriptor Input */}
     <input
       type="text"
       placeholder="Additional Descriptor"
       value={ingredient.additional_descriptor}
       onChange={(e) => handleIngredientChange(index, "additional_descriptor", e.target.value)}
     />
-    <button type="button" onClick={() => removeIngredient(index)} style={{ color: "red" }}>X</button>
+
+    {/* Remove Ingredient Button */}
+    <button type="button" className="remove-btn" onClick={() => removeIngredient(index)}>X</button>
   </div>
 ))}
 
+  </div>
 
-<button type="button" onClick={addIngredient}>+ Add Ingredient</button>
+  <button type="button" className="add-btn" onClick={addIngredient}>+ Add Ingredient</button>
 
+  <h3>Instructions</h3>
   <textarea
     name="instructions"
     placeholder="Instructions"
     value={recipeForm.instructions}
     onChange={handleInputChange}
   />
-  <label>Select Parent Recipe (Optional, if this is a Sub-Recipe):</label>
-<select
-  name="parentRecipeId"
-  value={recipeForm.parentRecipeId}
-  onChange={handleInputChange}
->
-  <option value="">-- No Parent (Regular Recipe) --</option>
-  {recipes.map((recipe) => (
-    <option key={recipe.id} value={recipe.id}>
-      {recipe.name}
-    </option>
-  ))}
-</select>
 
-  <button type="submit">{editingRecipeId ? "Update Recipe" : "Add Recipe"}</button>
+  <h3>Parent Recipe (Optional, for Sub-Recipes)</h3>
+  <select
+    name="parentRecipeId"
+    value={recipeForm.parentRecipeId}
+    onChange={handleInputChange}
+  >
+    <option value="">-- No Parent (Regular Recipe) --</option>
+    {recipes.map((recipe) => (
+      <option key={recipe.id} value={recipe.id}>
+        {recipe.name}
+      </option>
+    ))}
+  </select>
+
+  <button type="submit" className="submit-btn">{editingRecipeId ? "Update Recipe" : "Add Recipe"}</button>
 </form>
+
 
       <select id="recipeDropdown" onChange={handleSelectRecipe}>
   <option value="">-- Select a Recipe --</option>

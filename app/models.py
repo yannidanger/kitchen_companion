@@ -15,8 +15,16 @@ class Ingredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
 
+    # ADD THIS RELATIONSHIP HERE:
+    ingredient_recipes = db.relationship(
+        "RecipeIngredient",
+        back_populates="ingredient",
+        cascade="all, delete-orphan"
+    )
+
     def to_dict(self):
         return {'id': self.id, 'name': self.name}
+
     
 class Food(db.Model):
     __tablename__ = 'food'
@@ -137,20 +145,11 @@ class RecipeComponent(db.Model):
     )
 
     def to_dict(self, depth=1):
-        """
-        Convert recipe component object to dictionary, preventing infinite recursion.
-        :param depth: Controls how deep the nesting should go.
-        """
-        if depth <= 0:
-            return {'id': self.id}  # Return minimal data to prevent recursion
-
         return {
             'id': self.id,
-            'sub_recipe': self.sub_recipe.to_dict(depth - 1) if self.sub_recipe else None,
-            'quantity': self.quantity
+            'quantity': self.quantity,
+            'sub_recipe': self.sub_recipe.to_dict(depth - 1) if self.sub_recipe and depth > 0 else {'id': self.sub_recipe_id}
         }
-
-
 
 
 
@@ -159,23 +158,32 @@ class RecipeIngredient(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=True)
+    sub_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     quantity = db.Column(db.Float)
     unit = db.Column(db.String(50))
 
-    # ✅ Ensure RecipeIngredient is linked back to Recipe
-    recipe = db.relationship("Recipe", back_populates="ingredients")
-    ingredient = db.relationship("Ingredient")
+    # Relationships (clearly specify foreign keys)
+    recipe = db.relationship(
+        "Recipe",
+        foreign_keys=[recipe_id],
+        back_populates="ingredients"
+    )
+    sub_recipe = db.relationship(
+        "Recipe",
+        foreign_keys=[sub_recipe_id],
+        back_populates="used_as_sub_recipe"
+    )
+    ingredient = db.relationship("Ingredient", back_populates="ingredient_recipes")
 
     def to_dict(self):
         return {
             'id': self.id,
-            'ingredient': self.ingredient.to_dict(),
+            'ingredient': self.ingredient.to_dict() if self.ingredient else None,
+            'sub_recipe': self.sub_recipe.to_dict() if self.sub_recipe else None,
             'quantity': self.quantity,
             'unit': self.unit
         }
-
-    
 
 class Recipe(db.Model):
     __tablename__ = 'recipe'
@@ -186,30 +194,34 @@ class Recipe(db.Model):
     servings = db.Column(db.Integer)
     instructions = db.Column(db.Text)
 
+    ingredients = db.relationship(
+        "RecipeIngredient",
+        foreign_keys='RecipeIngredient.recipe_id',
+        back_populates="recipe",
+        cascade="all, delete-orphan"
+    )
+
+    used_as_sub_recipe = db.relationship(
+        "RecipeIngredient",
+        foreign_keys='RecipeIngredient.sub_recipe_id',
+        back_populates="sub_recipe"
+    )
+
     components = db.relationship(
         "RecipeComponent",
-        foreign_keys="[RecipeComponent.recipe_id]",
+        foreign_keys='RecipeComponent.recipe_id',
         back_populates="parent_recipe",
         cascade="all, delete-orphan"
     )
 
     used_in_recipes = db.relationship(
         "RecipeComponent",
-        foreign_keys="[RecipeComponent.sub_recipe_id]",
+        foreign_keys='RecipeComponent.sub_recipe_id',
         back_populates="sub_recipe",
         cascade="all, delete-orphan"
     )
 
-    ingredients = db.relationship("RecipeIngredient", back_populates="recipe")
-
     def to_dict(self, depth=1):
-        """
-        Convert recipe object to dictionary, preventing infinite recursion.
-        :param depth: Controls how deep the nesting should go.
-        """
-        if depth <= 0:
-            return {'id': self.id, 'name': self.name}  # Return minimal data to prevent recursion
-
         return {
             'id': self.id,
             'name': self.name,
@@ -217,9 +229,13 @@ class Recipe(db.Model):
             'servings': self.servings,
             'instructions': self.instructions,
             'ingredients': [ri.to_dict() for ri in self.ingredients],
-            'components': [component.to_dict(depth - 1) for component in self.components],
-            'used_in_recipes': [component.to_dict(depth - 1) for component in self.used_in_recipes]
+            'components': [component.to_dict(depth - 1) for component in self.components],  # ✅ Expands sub-recipes properly
         }
+
+
+
+
+
 
 
 
