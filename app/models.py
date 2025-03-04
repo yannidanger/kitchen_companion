@@ -1,13 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
 from app import db
 from datetime import datetime
-
-
-
-db = SQLAlchemy()
-
-
-from fractions import Fraction
 
 class Ingredient(db.Model):
     __tablename__ = 'ingredient'
@@ -193,6 +185,7 @@ class Recipe(db.Model):
     cook_time = db.Column(db.Integer)
     servings = db.Column(db.Integer)
     instructions = db.Column(db.Text)
+    favorite = db.Column(db.Boolean, default=False)
 
     ingredients = db.relationship(
         "RecipeIngredient",

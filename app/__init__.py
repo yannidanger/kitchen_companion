@@ -34,7 +34,7 @@ def create_app():
     from app.routes import meal_planner_routes
     app.register_blueprint(meal_planner_routes)
     from app.routes import store_routes
-    app.register_blueprint(store_routes, url_prefix='/stores')  # Adjust the URL prefix if needed
+    app.register_blueprint(store_routes, url_prefix='/stores')
     from app.routes import ingredient_routes
     app.register_blueprint(ingredient_routes, url_prefix='/ingredients')
     from app.routes import grocery_routes
@@ -44,8 +44,4 @@ def create_app():
     app.register_blueprint(sub_recipes_bp)
     print("sub_recipes_bp registered successfully.")
 
-
     return app
-
-# Ensure 'db' is importable
-from app.models import *
