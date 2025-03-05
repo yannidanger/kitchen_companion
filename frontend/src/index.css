@@ -112,3 +112,48 @@ select {
 .dropdown-content a:hover {
   background-color: #ddd;
 }
+
+/* Add these to your index.css */
+.sub-recipe-tag {
+  background-color: #4CAF50;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-left: 5px;
+}
+
+.add-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.add-sub-btn {
+  background: #2196F3;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.add-sub-btn:hover {
+  background: #0b7dda;
+}
+
+.view-sub-btn {
+  background: #7986CB;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.view-sub-btn:hover {
+  background: #5C6BC0;
+}
