@@ -97,9 +97,11 @@ def get_recipe(recipe_id):
         'ingredients': [ri.to_dict() for ri in recipe.ingredients]
     })
 
+# Update the add_recipe route in routes.py (around line 97)
 @recipes_routes.route('/api/recipes', methods=['POST'])
 def add_recipe():
     data = request.get_json()
+    logger.debug(f"Recipe data received: {data}")
 
     # Create or update recipe
     recipe = Recipe.query.get(data.get('id')) if data.get('id') else Recipe()
@@ -112,21 +114,24 @@ def add_recipe():
         db.session.add(recipe)
         db.session.flush()
 
-    # Handle ingredients and sub-recipes separately
+    # Clear existing ingredients and components
     RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
     RecipeComponent.query.filter_by(recipe_id=recipe.id).delete()
 
+    # Process ingredients
     for ingredient_data in data['ingredients']:
-        if 'sub_recipe_id' in ingredient_data:
-            # Sub-recipe handling
+        # Check if this is a sub-recipe reference
+        sub_recipe_id = ingredient_data.get('sub_recipe_id')
+        if sub_recipe_id:
+            # Add as a component (sub-recipe)
             component = RecipeComponent(
                 recipe_id=recipe.id,
-                sub_recipe_id=ingredient_data['sub_recipe_id'],
-                quantity=float(ingredient_data['quantity']) if ingredient_data['quantity'] else None
+                sub_recipe_id=sub_recipe_id,
+                quantity=float(ingredient_data['quantity']) if ingredient_data.get('quantity') else 1.0
             )
             db.session.add(component)
         else:
-            # Regular ingredient handling
+            # Regular ingredient
             ingredient_name = ingredient_data['item_name']
             ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
             if not ingredient:
@@ -137,7 +142,7 @@ def add_recipe():
             recipe_ingredient = RecipeIngredient(
                 recipe_id=recipe.id,
                 ingredient_id=ingredient.id,
-                quantity=float(ingredient_data['quantity']) if ingredient_data['quantity'] else None,
+                quantity=float(ingredient_data['quantity']) if ingredient_data.get('quantity') else None,
                 unit=ingredient_data.get('unit', '')
             )
             db.session.add(recipe_ingredient)
@@ -398,29 +403,28 @@ def save_and_generate_grocery_list():
             logger.warning("No meals provided in the request.")
             return jsonify({"error": "No meals provided"}), 400
 
-        # Collect ingredients from recipes
-        ingredients = []
+        # Collect ingredients from recipes including sub-recipes
+        all_ingredients = []
         for meal in meals:
             recipe_id = meal.get('recipe_id')
             if recipe_id:
-                recipe = Recipe.query.get(recipe_id)
-                if recipe:
-                    logger.debug(f"Processing recipe: {recipe.name}")
-                    for ingredient in recipe.ingredients:
-                        if not ingredient.item_name:
-                            logger.warning(f"Skipping ingredient with no name: {ingredient.to_dict()}")
-                            continue
+                ingredients = get_recipe_ingredients(recipe_id)
+                all_ingredients.extend(ingredients)
 
-                        ingredients.append({
-                            "id": ingredient.id,  # Include the ingredient ID for section mapping
-                            "main_text": ingredient.item_name.capitalize(),
-                            "quantity": ingredient.quantity or "",
-                            "unit": ingredient.unit or "",
-                            "precision_text": f"({ingredient.quantity or 'as needed'} {ingredient.unit or ''})".strip()
-                        })
+        # Consolidate ingredients by name and unit
+        consolidated = {}
+        for ingredient in all_ingredients:
+            key = (ingredient['item_name'], ingredient['unit'])
+            if key not in consolidated:
+                consolidated[key] = ingredient.copy()
+            else:
+                consolidated[key]['quantity'] += ingredient['quantity']
+                # Update precision text
+                consolidated[key]['precision_text'] = f"({consolidated[key]['quantity']} {consolidated[key]['unit']})"
 
-        # Map ingredients to sections
-        grocery_list = map_ingredients_to_sections(ingredients)
+        # Convert back to list and map to sections
+        ingredients_list = list(consolidated.values())
+        grocery_list = map_ingredients_to_sections(ingredients_list)
         logger.info(f"Generated categorized grocery list: {grocery_list}")
 
         return jsonify({"grocery_list": grocery_list})
@@ -428,9 +432,6 @@ def save_and_generate_grocery_list():
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}")
         return jsonify({"error": str(e)}), 500
-
-
-
 
 @store_routes.route('/api/stores', methods=['POST'])
 def create_or_update_store():
@@ -556,6 +557,55 @@ def grocery_list():
         logger.error(f"Error rendering grocery list page: {e}")
         return "An error occurred while rendering the page", 500
 
+def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
+    """Recursively get all ingredients for a recipe, including from sub-recipes.
+    
+    Args:
+        recipe_id: The ID of the recipe to get ingredients for
+        quantity_multiplier: A multiplier to apply to ingredient quantities (for sub-recipes)
+        visited: Set of already visited recipe IDs to prevent infinite loops
+    
+    Returns:
+        List of ingredient dictionaries
+    """
+    if visited is None:
+        visited = set()
+    
+    # Prevent circular references
+    if recipe_id in visited:
+        return []
+    
+    visited.add(recipe_id)
+    recipe = Recipe.query.get(recipe_id)
+    if not recipe:
+        return []
+    
+    result = []
+    
+    # Add direct ingredients
+    for ingredient in recipe.ingredients:
+        if ingredient.ingredient:  # Regular ingredient
+            result.append({
+                "id": ingredient.ingredient.id,
+                "item_name": ingredient.ingredient.name,
+                "quantity": (ingredient.quantity or 0) * quantity_multiplier,
+                "unit": ingredient.unit or "",
+                "main_text": ingredient.ingredient.name,
+                "precision_text": f"({(ingredient.quantity or 0) * quantity_multiplier} {ingredient.unit or ''})"
+            })
+    
+    # Add ingredients from sub-recipes
+    for component in recipe.components:
+        if component.sub_recipe_id:
+            sub_quantity = component.quantity or 1.0
+            sub_ingredients = get_recipe_ingredients(
+                component.sub_recipe_id, 
+                quantity_multiplier * sub_quantity,
+                visited.copy()  # Pass a copy to avoid modifying the original
+            )
+            result.extend(sub_ingredients)
+    
+    return result
 
 @meal_planner_routes.route('/api/grocery_list', methods=['GET'])
 def get_grocery_list_json():
@@ -710,3 +760,67 @@ def search_recipes():
 
     return jsonify([recipe.to_dict() for recipe in recipes])
 
+# Add/modify these routes in routes.py (around line 502, after the existing sub-recipe endpoints)
+
+@sub_recipes_bp.route('/', methods=['GET'])
+def list_all_sub_recipes():
+    """Get all recipes suitable for use as sub-recipes"""
+    recipes = Recipe.query.all()
+    return jsonify([{
+        'id': recipe.id,
+        'name': recipe.name,
+        'used_as_sub': len(recipe.used_in_recipes) > 0
+    } for recipe in recipes])
+
+@sub_recipes_bp.route('/recipe/<int:recipe_id>/components', methods=['GET'])
+def get_recipe_components(recipe_id):
+    """Get all sub-recipes used in a specific recipe"""
+    recipe = Recipe.query.get_or_404(recipe_id)
+    
+    # Get components with sub_recipe details
+    components = [{
+        'id': component.id,
+        'quantity': component.quantity,
+        'sub_recipe': {
+            'id': component.sub_recipe.id,
+            'name': component.sub_recipe.name,
+        }
+    } for component in recipe.components]
+    
+    return jsonify(components)
+
+@sub_recipes_bp.route('/check_circular', methods=['POST'])
+def check_circular_reference():
+    """Check if adding a sub-recipe would create a circular reference"""
+    data = request.json
+    parent_id = data.get('parent_id')
+    sub_recipe_id = data.get('sub_recipe_id')
+    
+    if parent_id == sub_recipe_id:
+        return jsonify({'circular': True, 'message': 'Cannot add a recipe as its own sub-recipe'})
+    
+    # Check if sub_recipe contains parent recursively
+    def check_recursive(recipe_id, target_id, visited=None):
+        if visited is None:
+            visited = set()
+        
+        if recipe_id in visited:
+            return False
+        
+        visited.add(recipe_id)
+        
+        components = RecipeComponent.query.filter_by(recipe_id=recipe_id).all()
+        for component in components:
+            if component.sub_recipe_id == target_id:
+                return True
+            if check_recursive(component.sub_recipe_id, target_id, visited):
+                return True
+        
+        return False
+    
+    is_circular = check_recursive(sub_recipe_id, parent_id)
+    
+    return jsonify({
+        'circular': is_circular,
+        'message': 'Adding this sub-recipe would create a circular reference' if is_circular else 'No circular reference detected'
+    })

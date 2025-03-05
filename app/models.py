@@ -214,16 +214,40 @@ class Recipe(db.Model):
         cascade="all, delete-orphan"
     )
 
+    # Update the to_dict method in the Recipe class in models.py (around line 249)
     def to_dict(self, depth=1):
-        return {
+        """Convert recipe to dictionary, with control over sub-recipe expansion depth."""
+        result = {
             'id': self.id,
             'name': self.name,
             'cook_time': self.cook_time,
             'servings': self.servings,
             'instructions': self.instructions,
             'ingredients': [ri.to_dict() for ri in self.ingredients],
-            'components': [component.to_dict(depth - 1) for component in self.components],  # ✅ Expands sub-recipes properly
         }
+        
+        # Only include components if we're still within the depth limit
+        if depth > 0:
+            result['components'] = [
+                {
+                    'id': component.id,
+                    'quantity': component.quantity,
+                    'sub_recipe': component.sub_recipe.to_dict(depth - 1) if component.sub_recipe else None
+                }
+                for component in self.components
+            ]
+        else:
+            # Just include basic component info at max depth
+            result['components'] = [
+                {
+                    'id': component.id,
+                    'quantity': component.quantity,
+                    'sub_recipe': {'id': component.sub_recipe_id, 'name': component.sub_recipe.name} if component.sub_recipe else None
+                }
+                for component in self.components
+            ]
+        
+        return result
 
 
 
