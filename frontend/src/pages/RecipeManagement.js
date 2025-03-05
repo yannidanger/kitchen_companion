@@ -204,7 +204,11 @@ function RecipeManagement() {
                   <ul className="ingredients-list">
                     {selectedRecipe.ingredients.map((ingredient, index) => (
                       <li key={index}>
-                        {ingredient.quantity} {ingredient.unit} {ingredient.ingredient?.name || "N/A"}
+                        {ingredient.quantity} {ingredient.unit}
+                        {ingredient.size ? ` ${ingredient.size}` : ''} 
+                        {ingredient.descriptor ? ` ${ingredient.descriptor} ` : ' '}
+                        {ingredient.ingredient?.name || "N/A"}
+                        {ingredient.additional_descriptor ? `, ${ingredient.additional_descriptor}` : ''}
                       </li>
                     ))}
                   </ul>

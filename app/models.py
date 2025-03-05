@@ -154,6 +154,9 @@ class RecipeIngredient(db.Model):
     sub_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     quantity = db.Column(db.Float)
     unit = db.Column(db.String(50))
+    size = db.Column(db.String(50))  # Add this line if not already there
+    descriptor = db.Column(db.String(100))  # Add this line if not already there
+    additional_descriptor = db.Column(db.String(100))  # Add this line if not already there
 
     # Relationships (clearly specify foreign keys)
     recipe = db.relationship(
@@ -174,7 +177,10 @@ class RecipeIngredient(db.Model):
             'ingredient': self.ingredient.to_dict() if self.ingredient else None,
             'sub_recipe': self.sub_recipe.to_dict() if self.sub_recipe else None,
             'quantity': self.quantity,
-            'unit': self.unit
+            'unit': self.unit,
+            'size': self.size,
+            'descriptor': self.descriptor,
+            'additional_descriptor': self.additional_descriptor
         }
 
 class Recipe(db.Model):
@@ -214,7 +220,6 @@ class Recipe(db.Model):
         cascade="all, delete-orphan"
     )
 
-    # Update the to_dict method in the Recipe class in models.py (around line 249)
     def to_dict(self, depth=1):
         """Convert recipe to dictionary, with control over sub-recipe expansion depth."""
         result = {

@@ -184,72 +184,72 @@ def update_recipe(recipe_id):
         recipe.servings = int(data['servings']) if data['servings'] else None
         recipe.instructions = data['instructions']
 
-        # Process ingredients
-        updated_ingredient_ids = []
-        for ingredient_data in data['ingredients']:
-            logger.debug(f"Processing ingredient data: {ingredient_data}")
-            ingredient_id = ingredient_data.get('id')
-            if ingredient_id:
-                logger.debug(f"Existing ingredient ID: {ingredient_id}")
-                recipe_ingredient = RecipeIngredient.query.get(ingredient_id)
-            if recipe_ingredient:
-                recipe_ingredient.quantity = float(Fraction(ingredient_data['quantity'])) if ingredient_data['quantity'] else None
-                recipe_ingredient.unit = ingredient_data.get('unit', '') or None
-                recipe_ingredient.size = ingredient_data.get('size', '') or None
-                recipe_ingredient.descriptor = ingredient_data.get('descriptor', '') or None
-                recipe_ingredient.additional_descriptor = ingredient_data.get('additional_descriptor', '') or None
-
-                # Ensure ingredient name is correctly updated
-                ingredient_obj = Ingredient.query.get(recipe_ingredient.ingredient_id)
-                if ingredient_obj:
-                    ingredient_obj.name = ingredient_data.get('item_name', '')
-
-                db.session.commit()
-
-
-
-                recipe_ingredient.size = ingredient_data.get('size', '')
-                recipe_ingredient.descriptor = ingredient_data.get('descriptor', '')
-                recipe_ingredient.additional_descriptor = ingredient_data.get('additional_descriptor', '')
-                updated_ingredient_ids.append(recipe_ingredient.id)
-
+        # Process ingredients - separate regular ingredients from sub-recipes
+        regular_ingredients = []
+        sub_recipes = []
+        
+        for item in data['ingredients']:
+            if 'sub_recipe_id' in item and item['sub_recipe_id']:
+                # This is a sub-recipe
+                sub_recipes.append(item)
             else:
-                logger.debug("New ingredient, no ID provided.")
-                # Ensure the ingredient exists
-                ingredient_name = ingredient_data['item_name']
-                existing_ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
-
-                if not existing_ingredient:
-                    existing_ingredient = Ingredient(name=ingredient_name)
-                    db.session.add(existing_ingredient)
-                    db.session.flush()  # Ensure ingredient ID is available
-
-                # ✅ Now, properly link the ingredient to the recipe using RecipeIngredient
-                recipe_ingredient = RecipeIngredient(
-                    recipe_id=recipe.id,
-                    ingredient_id=existing_ingredient.id,
-                    quantity=float(Fraction(ingredient_data['quantity'])) if ingredient_data['quantity'] else None,
-                    unit=ingredient_data.get('unit', '')
-                )
-                db.session.add(recipe_ingredient)
-
+                # This is a regular ingredient
+                regular_ingredients.append(item)
+        
+        logger.debug(f"Regular ingredients: {regular_ingredients}")
+        logger.debug(f"Sub-recipes: {sub_recipes}")
+        
+        # Clear existing ingredients and components to rebuild them
+        # This approach is simpler and less error-prone for this specific case
+        RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+        RecipeComponent.query.filter_by(recipe_id=recipe.id).delete()
+        
+        # Re-add regular ingredients
+        for ingredient_data in regular_ingredients:
+            ingredient_name = ingredient_data.get('item_name')
+            if not ingredient_name:
+                continue  # Skip ingredients without a name
+                
+            # Find or create the ingredient
+            ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+            if not ingredient:
+                ingredient = Ingredient(name=ingredient_name)
+                db.session.add(ingredient)
                 db.session.flush()
-                updated_ingredient_ids.append(recipe_ingredient.id)
+            
+            # Create the recipe ingredient
+            # Inside update_recipe function, when processing regular ingredients
+            recipe_ingredient = RecipeIngredient(
+                recipe_id=recipe.id,
+                ingredient_id=ingredient.id,
+                quantity=float(ingredient_data.get('quantity', 0)) if ingredient_data.get('quantity') else None,
+                unit=ingredient_data.get('unit', ''),
+                size=ingredient_data.get('size', ''),  # Add this line
+                descriptor=ingredient_data.get('descriptor', ''),  # Add this line
+                additional_descriptor=ingredient_data.get('additional_descriptor', '')  # Add this line
+            )
+            db.session.add(recipe_ingredient)
+        
+        # Re-add sub-recipes as components
+        for sub_recipe_data in sub_recipes:
+            sub_recipe_id = sub_recipe_data.get('sub_recipe_id')
+            if not sub_recipe_id:
+                continue  # Skip invalid sub-recipes
+                
+            # Create the component
+            component = RecipeComponent(
+                recipe_id=recipe.id,
+                sub_recipe_id=sub_recipe_id,
+                quantity=float(sub_recipe_data.get('quantity', 1)) if sub_recipe_data.get('quantity') else 1.0
+            )
+            db.session.add(component)
 
-        # Remove ingredients not in the update
-        RecipeIngredient.query.filter(
-            RecipeIngredient.recipe_id == recipe.id,
-            ~RecipeIngredient.id.in_(updated_ingredient_ids)
-        ).delete(synchronize_session=False)
-
-
-        # Commit changes
+        # Commit all changes
         db.session.commit()
         logger.info(f"Recipe updated successfully: {recipe}")
-        return jsonify({
-            **recipe.to_dict(),
-            'ingredients': [ingredient.to_dict() for ingredient in recipe.ingredients]
-        }), 200
+        
+        # Return the updated recipe with all details
+        return jsonify(recipe.to_dict()), 200
 
     except Exception as e:
         import traceback

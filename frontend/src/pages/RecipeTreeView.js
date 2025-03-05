@@ -41,10 +41,14 @@ function RecipeTreeView({ recipe, initialExpanded = false }) {
             <div className="recipe-tree-ingredients">
               <h5>Ingredients:</h5>
               <ul>
-                {recipe.ingredients.map((ingredient, idx) => (
-                  <li key={idx}>
-                    {ingredient.quantity} {ingredient.unit} {ingredient.ingredient?.name || "N/A"}
-                  </li>
+              {recipe.ingredients.map((ingredient, idx) => (
+                <li key={idx}>
+                    {ingredient.quantity} {ingredient.unit}
+                    {ingredient.size ? ` ${ingredient.size}` : ''} 
+                    {ingredient.descriptor ? ` ${ingredient.descriptor} ` : ' '}
+                    {ingredient.ingredient?.name || "N/A"}
+                    {ingredient.additional_descriptor ? `, ${ingredient.additional_descriptor}` : ''}
+                </li>
                 ))}
               </ul>
             </div>
