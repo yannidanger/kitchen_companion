@@ -1,0 +1,99 @@
+/* Common layout styles */
+
+/* Standard container */
+.container {
+    width: 100%;
+    max-width: var(--container-width-md);
+    margin: 0 auto;
+    padding: var(--spacing-xl);
+  }
+  
+  .container-sm {
+    max-width: var(--container-width-sm);
+  }
+  
+  /* Flex layouts */
+  .flex {
+    display: flex;
+  }
+  
+  .flex-col {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .flex-wrap {
+    flex-wrap: wrap;
+  }
+  
+  .justify-between {
+    justify-content: space-between;
+  }
+  
+  .justify-center {
+    justify-content: center;
+  }
+  
+  .items-center {
+    align-items: center;
+  }
+  
+  .gap-sm {
+    gap: var(--spacing-sm);
+  }
+  
+  .gap-md {
+    gap: var(--spacing-md);
+  }
+  
+  .gap-lg {
+    gap: var(--spacing-lg);
+  }
+  
+  /* Spacing utilities */
+  .mt-sm { margin-top: var(--spacing-sm); }
+  .mt-md { margin-top: var(--spacing-md); }
+  .mt-lg { margin-top: var(--spacing-lg); }
+  .mt-xl { margin-top: var(--spacing-xl); }
+  
+  .mb-sm { margin-bottom: var(--spacing-sm); }
+  .mb-md { margin-bottom: var(--spacing-md); }
+  .mb-lg { margin-bottom: var(--spacing-lg); }
+  .mb-xl { margin-bottom: var(--spacing-xl); }
+  
+  /* Section layouts */
+  .card {
+    background-color: white;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--box-shadow-md);
+  }
+  
+  .card-padding {
+    padding: var(--spacing-xl);
+  }
+  
+  .section {
+    margin-bottom: var(--spacing-xl);
+  }
+  
+  /* Page header with bottom border */
+  .page-header {
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  /* Responsive helpers */
+  @media (max-width: 768px) {
+    .hide-mobile {
+      display: none;
+    }
+    
+    .mobile-full-width {
+      width: 100%;
+    }
+    
+    .mobile-flex-col {
+      flex-direction: column;
+    }
+  }

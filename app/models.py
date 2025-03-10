@@ -47,7 +47,11 @@ class WeeklyPlan(db.Model):
                 recipe = Recipe.query.get(meal.recipe_id)
                 if recipe:
                     for ingredient in recipe.ingredients:
-                        ingredients.add(ingredient.item_name)
+                        # Change this line:
+                        # from: ingredients.add(ingredient.item_name)
+                        # to:
+                        if ingredient.ingredient:
+                            ingredients.add(ingredient.ingredient.name)
         return len(ingredients)
 
 class MealSlot(db.Model):
@@ -83,12 +87,12 @@ class Section(db.Model):
     order = db.Column(db.Integer, nullable=False)  # For custom ordering
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
 
-
 class IngredientSection(db.Model):
     __tablename__ = 'ingredient_section'
     id = db.Column(db.Integer, primary_key=True)
-    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=False)  # Use 'ingredient'
-    section_id = db.Column(db.Integer, db.ForeignKey('section.id'), nullable=False)  # Already correct
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredient.id'), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey('section.id'), nullable=False)
+    order = db.Column(db.Integer, default=0)  # Add this field for custom ordering
 
     # Define the relationship
     section = db.relationship('Section', backref='ingredient_sections', lazy=True)
@@ -157,6 +161,9 @@ class RecipeIngredient(db.Model):
     size = db.Column(db.String(50))  # Add this line if not already there
     descriptor = db.Column(db.String(100))  # Add this line if not already there
     additional_descriptor = db.Column(db.String(100))  # Add this line if not already there
+    quantity_numerator = db.Column(db.Integer)
+    quantity_denominator = db.Column(db.Integer)
+    is_fraction = db.Column(db.Boolean, default=False)
 
     # Relationships (clearly specify foreign keys)
     recipe = db.relationship(
@@ -172,6 +179,18 @@ class RecipeIngredient(db.Model):
     ingredient = db.relationship("Ingredient", back_populates="ingredient_recipes")
 
     def to_dict(self):
+        fraction_str = None
+        if self.is_fraction and self.quantity_numerator is not None and self.quantity_denominator is not None:
+            if self.quantity_numerator >= self.quantity_denominator:
+                whole_part = self.quantity_numerator // self.quantity_denominator
+                numerator = self.quantity_numerator % self.quantity_denominator
+                if numerator == 0:
+                    fraction_str = str(whole_part)
+                else:
+                    fraction_str = f"{whole_part} {numerator}/{self.quantity_denominator}"
+            else:
+                fraction_str = f"{self.quantity_numerator}/{self.quantity_denominator}"
+                
         return {
             'id': self.id,
             'ingredient': self.ingredient.to_dict() if self.ingredient else None,
@@ -180,7 +199,11 @@ class RecipeIngredient(db.Model):
             'unit': self.unit,
             'size': self.size,
             'descriptor': self.descriptor,
-            'additional_descriptor': self.additional_descriptor
+            'additional_descriptor': self.additional_descriptor,
+            'is_fraction': self.is_fraction,
+            'quantity_numerator': self.quantity_numerator,
+            'quantity_denominator': self.quantity_denominator,
+            'fraction_str': fraction_str
         }
 
 class Recipe(db.Model):
@@ -188,7 +211,7 @@ class Recipe(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
-    cook_time = db.Column(db.Integer)
+    cook_time = db.Column(db.String(100))
     servings = db.Column(db.Integer)
     instructions = db.Column(db.Text)
     favorite = db.Column(db.Boolean, default=False)

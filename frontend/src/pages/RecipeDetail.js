@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import "./RecipeDetail.css"; // Make sure to import the enhanced CSS
 
 function RecipeDetail() {
   const { recipeId } = useParams();
@@ -15,7 +14,70 @@ function RecipeDetail() {
     ingredients: [],
     components: []
   });
-  
+
+  // eslint-disable-next-line no-unused-vars
+  const formatFraction = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+
+    // Check if the value is a string that might be a fraction
+    if (typeof value === 'string' && (value.includes('/') || value.includes(' '))) {
+      return value;
+    }
+
+    // Check if it's a whole number
+    if (Number.isInteger(Number(value))) {
+      return String(value);
+    }
+
+    // Convert decimal to fraction
+    try {
+      const decimal = parseFloat(value);
+      if (isNaN(decimal)) return String(value)
+
+      // Handle common fractions
+      const tolerance = 0.01;
+      const commonFractions = [
+        { decimal: 0.25, fraction: '1/4' },
+        { decimal: 0.33, fraction: '1/3' },
+        { decimal: 0.5, fraction: '1/2' },
+        { decimal: 0.66, fraction: '2/3' },
+        { decimal: 0.75, fraction: '3/4' }
+      ];
+
+      for (const frac of commonFractions) {
+        if (Math.abs(decimal - frac.decimal) < tolerance) {
+          return frac.fraction;
+        }
+      }
+
+      // For other decimals, convert to fractions
+      if (decimal > 0 && decimal < 1) {
+        // Try to find a simple fraction (denominator up to 16)
+        for (let denominator = 2; denominator <= 16; denominator++) {
+          const numerator = Math.round(decimal * denominator);
+          if (Math.abs(decimal - numerator / denominator) < tolerance) {
+            return `${numerator}/${denominator}`;
+          }
+        }
+      }
+
+      // For mixed numbers (greater than 1)
+      if (decimal > 1) {
+        const wholePart = Math.floor(decimal);
+        const fractionalPart = decimal - wholePart;
+
+        if (fractionalPart > 0) {
+          const fractionStr = formatFraction(fractionalPart);
+          return fractionStr.includes('/') ? `${wholePart} ${fractionStr}` : value;
+        }
+      }
+
+      return value;
+    } catch (e) {
+      return value;
+    }
+  };
+
 
   useEffect(() => {
     // Fetch available sub-recipes
@@ -30,31 +92,43 @@ function RecipeDetail() {
     };
 
     // Fetch the recipe details
+    // In RecipeDetail.js
+    // Update the fetchRecipe function in the useEffect hook to use fraction_str
+
     const fetchRecipe = async () => {
       try {
         const response = await fetch(`http://127.0.0.1:5000/api/recipes/${recipeId}`);
         const data = await response.json();
         console.log("Recipe data from API:", JSON.stringify(data, null, 2));
         setRecipe(data);
-        
-        // Populate the form
+
+        // Process ingredients to use fraction_str if available
+        const processedIngredients = data.ingredients.map(ingredient => {
+          return {
+            ...ingredient,
+            // Use fraction_str or the original quantity
+            quantity: ingredient.fraction_str || ingredient.quantity
+          };
+        });
+
+        // Populate the form with the processed ingredients
         setForm({
           name: data.name || "",
           cook_time: data.cook_time || "",
           servings: data.servings || "",
           instructions: data.instructions || "",
-          ingredients: data.ingredients || [], 
+          ingredients: processedIngredients,
           components: data.components || []
         });
       } catch (error) {
         console.error("Error fetching recipe:", error);
       }
     };
-      
+
     fetchAvailableSubRecipes();
     fetchRecipe();
   }, [recipeId]);
-  
+
 
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -70,7 +144,7 @@ function RecipeDetail() {
       return { ...prevForm, ingredients: updatedIngredients };
     });
   };
-  
+
   const handleComponentChange = (index, field, value) => {
     setForm((prevForm) => {
       const updatedComponents = [...prevForm.components];
@@ -130,7 +204,7 @@ function RecipeDetail() {
     e.preventDefault();
     try {
       console.log("Form data before submission:", form);
-      
+
       // Prepare the payload with separate handling for ingredients and sub-recipes
       const payload = {
         name: form.name,
@@ -139,7 +213,7 @@ function RecipeDetail() {
         instructions: form.instructions,
         ingredients: []
       };
-      
+
       // Add regular ingredients
       form.ingredients.forEach(ingredient => {
         // Only add if it has a name
@@ -155,7 +229,7 @@ function RecipeDetail() {
           });
         }
       });
-      
+
       // Add sub-recipes
       if (form.components && form.components.length > 0) {
         form.components.forEach(component => {
@@ -169,22 +243,22 @@ function RecipeDetail() {
           }
         });
       }
-      
+
       console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
-      
+
       const response = await fetch(`http://127.0.0.1:5000/api/recipes/${recipeId}`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json" 
+        headers: {
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`Failed to update recipe: ${errorData.error || "Unknown error"}`);
       }
-  
+
       alert("Recipe updated!");
       navigate("/recipe-management");
     } catch (error) {
@@ -192,68 +266,68 @@ function RecipeDetail() {
       alert("Error updating recipe: " + error.message);
     }
   };
-  
+
   return (
     <div className="recipe-detail-container">
       <div className="recipe-detail-header">
         <h2>Edit Recipe</h2>
       </div>
-      
+
       {recipe ? (
         <form className="recipe-detail-form" onSubmit={handleSubmit}>
           {/* Basic Recipe Information */}
           <div className="form-group">
             <label htmlFor="recipe-name">Recipe Name</label>
-            <input 
+            <input
               id="recipe-name"
-              type="text" 
-              name="name" 
-              value={form.name} 
-              onChange={handleInputChange} 
-              required 
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleInputChange}
+              required
             />
           </div>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="cook-time">Cook Time (minutes)</label>
-              <input 
+              <input
                 id="cook-time"
-                type="number" 
-                name="cook_time" 
-                value={form.cook_time} 
-                onChange={handleInputChange} 
+                type="text"
+                name="cook_time"
+                value={form.cook_time}
+                onChange={handleInputChange}
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="servings">Servings</label>
-              <input 
+              <input
                 id="servings"
-                type="number" 
-                name="servings" 
-                value={form.servings} 
-                onChange={handleInputChange} 
+                type="number"
+                name="servings"
+                value={form.servings}
+                onChange={handleInputChange}
               />
             </div>
           </div>
-          
+
           {/* Ingredients Section */}
           <h3 className="section-header">Ingredients</h3>
           <p className="helper-text">Format: Quantity | Unit | Size | Descriptor | Ingredient Name | Additional Descriptor</p>
-          
+
           <div className="ingredients-section">
             {form.ingredients && form.ingredients.length > 0 ? (
               form.ingredients.map((ingredient, index) => {
                 // Skip ingredient if it's actually a sub-recipe component
                 if (ingredient.sub_recipe_id) return null;
-                
+
                 return (
                   <div key={index} className="ingredient-row">
                     <input
                       className="qty-field"
-                      type="number"
-                      placeholder="Quantity"
+                      type="text"
+                      placeholder="Quantity (e.g., 1/2, 1 1/2)"
                       value={ingredient.quantity || ""}
                       onChange={(e) => handleIngredientChange(index, "quantity", e.target.value)}
                     />
@@ -292,6 +366,7 @@ function RecipeDetail() {
                         <option value="packet">Packet</option>
                         <option value="stick">Stick</option>
                         <option value="block">Block</option>
+                        <option value="sprig">Sprig</option>
                       </optgroup>
                     </select>
                     <select
@@ -326,8 +401,8 @@ function RecipeDetail() {
                       value={ingredient.additional_descriptor || ""}
                       onChange={(e) => handleIngredientChange(index, "additional_descriptor", e.target.value)}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="remove-button"
                       onClick={() => removeIngredient(index)}
                     >
@@ -339,15 +414,15 @@ function RecipeDetail() {
             ) : (
               <p>No ingredients yet. Add some below.</p>
             )}
-            
+
             <button type="button" className="add-button" onClick={addIngredient}>
               <span className="add-button-icon">+</span> Add Ingredient
             </button>
           </div>
-          
+
           {/* Sub-Recipes Section */}
           <h3 className="section-header">Sub-Recipes</h3>
-          
+
           <div className="sub-recipes-section">
             {form.components && form.components.length > 0 ? (
               form.components.map((component, index) => (
@@ -382,8 +457,8 @@ function RecipeDetail() {
                     step="0.1"
                   />
                   <span className="sub-recipe-unit">servings</span>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="remove-button"
                     onClick={() => removeComponent(index)}
                   >
@@ -394,24 +469,24 @@ function RecipeDetail() {
             ) : (
               <p>No sub-recipes yet. Add some below.</p>
             )}
-            
+
             <button type="button" className="add-button add-sub-button" onClick={addSubRecipe}>
               <span className="add-button-icon">+</span> Add Sub-Recipe
             </button>
           </div>
-          
+
           {/* Instructions Section */}
           <div className="form-group">
             <label htmlFor="instructions">Instructions</label>
-            <textarea 
+            <textarea
               id="instructions"
-              name="instructions" 
-              value={form.instructions} 
-              onChange={handleInputChange} 
+              name="instructions"
+              value={form.instructions}
+              onChange={handleInputChange}
               placeholder="Enter detailed cooking instructions..."
             />
           </div>
-          
+
           {/* Form Actions */}
           <div className="form-actions">
             <button type="button" className="cancel-button" onClick={() => navigate("/recipe-management")}>

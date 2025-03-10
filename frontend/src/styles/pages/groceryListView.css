@@ -1,0 +1,330 @@
+/* Grocery List View page styles */
+
+/* Container */
+.grocery-list-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--container-width-sm);
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+}
+
+.grocery-list-header {
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.grocery-list-header h1 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: var(--font-size-xxl);
+}
+
+.plan-name {
+  margin: var(--spacing-sm) 0 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  font-weight: normal;
+}
+
+.plan-name-edit {
+  margin-top: var(--spacing-sm);
+  width: 100%;
+  max-width: 400px;
+}
+
+.plan-name-edit input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-md);
+}
+
+/* Actions */
+.grocery-list-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xl);
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.back-btn,
+.save-plan-btn,
+.print-btn,
+.export-btn {
+  padding: var(--spacing-sm) 16px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.back-btn {
+  background-color: var(--background-light);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.back-btn:hover {
+  background-color: var(--background-lighter);
+}
+
+.save-plan-btn {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.save-plan-btn:hover {
+  background-color: var(--primary-hover);
+}
+
+.print-btn {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.print-btn:hover {
+  background-color: var(--success-hover);
+}
+
+.export-btn {
+  background-color: var(--info-color);
+  color: white;
+}
+
+.export-btn:hover {
+  background-color: var(--info-color);
+  opacity: 0.9;
+}
+
+/* States */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.error-message {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--danger-color);
+  background-color: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: var(--border-radius-sm);
+}
+
+.empty-list {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  background-color: var(--background-light);
+  border-radius: var(--border-radius-md);
+}
+
+/* Grocery list content */
+.sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.grocery-section {
+  background-color: white;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--box-shadow-md);
+  overflow: hidden;
+}
+
+.section-title {
+  margin: 0;
+  padding: 12px var(--spacing-lg);
+  background-color: var(--background-lighter);
+  color: var(--text-color);
+  font-size: var(--font-size-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.grocery-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.grocery-item {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color 0.2s;
+}
+
+.grocery-item:last-child {
+  border-bottom: none;
+}
+
+.grocery-item:hover {
+  background-color: var(--background-light);
+}
+
+.grocery-item.checked {
+  background-color: var(--checked-item-bg);
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  padding-left: 30px;
+  user-select: none;
+}
+
+.item-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background-color: #eee;
+  border-radius: var(--border-radius-sm);
+}
+
+.checkbox-container:hover .checkmark {
+  background-color: #ccc;
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--success-color);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-container .checkmark:after {
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.item-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.item-name {
+  font-weight: 500;
+}
+
+.item-quantity {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.grocery-item.checked .item-name {
+  text-decoration: line-through;
+  color: var(--text-light);
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .grocery-list-container {
+    padding: 0;
+  }
+  
+  .grocery-list-header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+  }
+  
+  .grocery-section {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .section-title {
+    background-color: var(--background-lighter);
+  }
+  
+  .grocery-item {
+    padding: var(--spacing-sm) var(--spacing-lg);
+  }
+  
+  .item-details {
+    margin-left: 0;
+  }
+  
+  .grocery-item.checked .item-name {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grocery-list-actions {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+  
+  .action-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .back-btn,
+  .save-plan-btn,
+  .print-btn,
+  .export-btn {
+    font-size: var(--font-size-sm);
+    padding: 6px 12px;
+  }
+  
+  .item-details {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .item-quantity {
+    margin-top: var(--spacing-sm);
+  }
+}

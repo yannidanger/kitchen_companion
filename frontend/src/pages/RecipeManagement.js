@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import RecipeTreeView from "./RecipeTreeView"; // Updated import path
-import './RecipeManagement.css';
+import RecipeTreeView from "../components/RecipeTreeView"; // Updated import path
 
 function RecipeManagement() {
   const [recipes, setRecipes] = useState([]);
@@ -204,7 +203,7 @@ function RecipeManagement() {
                   <ul className="ingredients-list">
                     {selectedRecipe.ingredients.map((ingredient, index) => (
                       <li key={index}>
-                        {ingredient.quantity} {ingredient.unit}
+                        {ingredient.fraction_str || ingredient.quantity} {ingredient.unit}
                         {ingredient.size ? ` ${ingredient.size}` : ''} 
                         {ingredient.descriptor ? ` ${ingredient.descriptor} ` : ' '}
                         {ingredient.ingredient?.name || "N/A"}

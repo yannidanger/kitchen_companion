@@ -1,0 +1,217 @@
+/* Recipe Detail page styles */
+
+/* Container */
+.recipe-detail-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--container-width-sm);
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+  background-color: white;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--box-shadow-md);
+}
+
+.recipe-detail-header {
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.recipe-detail-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+/* Ingredient rows */
+.ingredients-section {
+  background-color: var(--background-light);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.ingredient-row {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: 12px;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background-color: white;
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--box-shadow-sm);
+}
+
+.ingredient-row input,
+.ingredient-row select {
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+/* Field sizing */
+.qty-field {
+  width: 80px;
+}
+
+.unit-field {
+  width: 120px;
+}
+
+.size-field {
+  width: 100px;
+}
+
+.name-field {
+  flex: 1;
+}
+
+.descriptor-field {
+  width: 150px;
+}
+
+/* Sub-recipe styles */
+.sub-recipes-section {
+  background-color: var(--sub-recipe-bg);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.sub-recipe-row {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: 12px;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background-color: white;
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid var(--primary-color);
+  box-shadow: var(--box-shadow-sm);
+}
+
+.sub-recipe-select {
+  flex: 1;
+}
+
+.sub-recipe-unit {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-left: var(--spacing-sm);
+}
+
+/* Button styles */
+.add-button {
+  padding: var(--spacing-sm) 16px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-button:hover {
+  background-color: var(--primary-hover);
+}
+
+.add-button-icon {
+  margin-right: var(--spacing-sm);
+}
+
+.add-sub-button {
+  background-color: var(--success-color);
+}
+
+.add-sub-button:hover {
+  background-color: var(--success-hover);
+}
+
+.remove-button {
+  background: none;
+  border: none;
+  color: var(--danger-color);
+  cursor: pointer;
+  font-size: 16px;
+  padding: var(--spacing-sm);
+  transition: color 0.2s;
+}
+
+.remove-button:hover {
+  color: var(--danger-hover);
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xxl);
+  justify-content: flex-end;
+}
+
+.save-button {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.save-button:hover {
+  background-color: var(--primary-hover);
+}
+
+.cancel-button {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background-color: var(--background-light);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+  background-color: var(--background-lighter);
+}
+
+/* Loading state */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xxl);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ingredient-row,
+  .sub-recipe-row {
+    flex-wrap: wrap;
+  }
+  
+  .name-field {
+    width: 100%;
+    flex: none;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .save-button, 
+  .cancel-button {
+    width: 100%;
+  }
+}

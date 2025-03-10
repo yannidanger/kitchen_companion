@@ -1,0 +1,123 @@
+/* Recipe Tree component styles */
+.recipe-tree-node {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .recipe-tree-header {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    transition: background-color 0.2s;
+    font-weight: 500;
+  }
+  
+  .recipe-tree-header.has-children {
+    background-color: var(--sub-recipe-bg);
+  }
+  
+  .recipe-tree-header:hover {
+    background-color: #e6f7ff;
+  }
+  
+  .recipe-tree-toggle {
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    color: var(--primary-color);
+    margin-right: var(--spacing-sm);
+  }
+  
+  .recipe-tree-name {
+    font-weight: 500;
+  }
+  
+  .recipe-tree-content {
+    margin-left: var(--spacing-md);
+    padding: var(--spacing-md) 0 var(--spacing-sm) var(--spacing-lg);
+    border-left: 2px dashed var(--primary-color);
+  }
+  
+  .recipe-tree-ingredients h5,
+  .recipe-tree-sub-recipes h5 {
+    margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+  
+  .recipe-tree-ingredients ul {
+    list-style: none;
+    padding-left: var(--spacing-sm);
+    margin: 0;
+  }
+  
+  .recipe-tree-ingredients li {
+    padding: 3px 0;
+  }
+  
+  .recipe-tree-sub-recipe {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .recipe-tree-sub-recipe-header {
+    display: flex;
+    align-items: center;
+  }
+  
+  .recipe-tree-quantity {
+    margin-right: var(--spacing-sm);
+    font-weight: normal;
+  }
+  
+  .recipe-tree-loading {
+    color: var(--text-light);
+    font-style: italic;
+  }
+  
+  .recipe-tree-load {
+    color: var(--primary-color);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  .recipe-tree-load:hover {
+    color: var(--primary-hover);
+  }
+  
+  .recursive-warning {
+    background-color: var(--error-bg);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--danger-color);
+  }
+  
+  .recipe-tree-warning {
+    margin-right: var(--spacing-sm);
+    color: var(--danger-color);
+  }
+  
+  /* Keep some legacy styles for backward compatibility */
+  .sub-recipe-container {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .sub-recipe-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    transition: background-color 0.2s;
+  }
+  
+  .toggle-icon {
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    color: var(--primary-color);
+  }
+  
+  .sub-recipe-name {
+    font-weight: 500;
+  }

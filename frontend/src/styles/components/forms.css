@@ -1,0 +1,130 @@
+/* Form component styles */
+
+/* Form container */
+.form-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+  }
+  
+  /* Form sections */
+  .form-section {
+    background-color: var(--background-light);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    margin-bottom: var(--spacing-xl);
+  }
+  
+  /* Form row (horizontal layout) */
+  .form-row {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+  
+  /* Form group (label + input) */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .form-group label {
+    font-weight: 500;
+    color: var(--text-color);
+  }
+  
+  /* Form inputs */
+  .form-control {
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-md);
+  }
+  
+  input.form-control,
+  select.form-control {
+    height: 38px;
+  }
+  
+  textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  }
+  
+  /* Input variations */
+  .form-control-sm {
+    padding: var(--spacing-sm);
+    height: 32px;
+    font-size: var(--font-size-sm);
+  }
+  
+  .form-control-lg {
+    padding: var(--spacing-lg);
+    height: 46px;
+  }
+  
+  /* Field sizes */
+  .field-xs {
+    width: 80px;
+  }
+  
+  .field-sm {
+    width: 120px;
+  }
+  
+  .field-md {
+    width: 150px;
+  }
+  
+  .field-lg {
+    flex: 1;
+  }
+  
+  /* Section headers */
+  .section-header {
+    margin: var(--spacing-xl) 0 var(--spacing-md) 0;
+    font-size: var(--font-size-lg);
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--border-light);
+    padding-bottom: var(--spacing-sm);
+  }
+  
+  /* Helper text */
+  .helper-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: var(--spacing-sm) 0 var(--spacing-lg) 0;
+    font-style: italic;
+  }
+  
+  /* Form actions container */
+  .form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xxl);
+    justify-content: flex-end;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .form-row {
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+    
+    .form-actions {
+      flex-direction: column;
+    }
+    
+    .form-actions .btn {
+      width: 100%;
+    }
+  }

@@ -1,4 +1,6 @@
 from fractions import Fraction
+import math
+import re
 import logging
 from flask import Blueprint, jsonify, request, render_template, current_app
 from app.utils import parse_ingredients  # Importing the missing function
@@ -97,7 +99,9 @@ def get_recipe(recipe_id):
         'ingredients': [ri.to_dict() for ri in recipe.ingredients]
     })
 
-# Update the add_recipe route in routes.py (around line 97)
+# In routes.py
+# Update the add_recipe function
+
 @recipes_routes.route('/api/recipes', methods=['POST'])
 def add_recipe():
     data = request.get_json()
@@ -106,7 +110,7 @@ def add_recipe():
     # Create or update recipe
     recipe = Recipe.query.get(data.get('id')) if data.get('id') else Recipe()
     recipe.name = data['name']
-    recipe.cook_time = int(data['cook_time']) if data['cook_time'] else None
+    recipe.cook_time = data['cook_time'] if data['cook_time'] else None
     recipe.servings = int(data['servings']) if data['servings'] else None
     recipe.instructions = data['instructions']
 
@@ -124,10 +128,13 @@ def add_recipe():
         sub_recipe_id = ingredient_data.get('sub_recipe_id')
         if sub_recipe_id:
             # Add as a component (sub-recipe)
+            quantity_str = ingredient_data.get('quantity', '1')
+            quantity_float, _, _, _ = parse_fraction(str(quantity_str))
+            
             component = RecipeComponent(
                 recipe_id=recipe.id,
                 sub_recipe_id=sub_recipe_id,
-                quantity=float(ingredient_data['quantity']) if ingredient_data.get('quantity') else 1.0
+                quantity=quantity_float or 1.0
             )
             db.session.add(component)
         else:
@@ -139,11 +146,21 @@ def add_recipe():
                 db.session.add(ingredient)
                 db.session.flush()
 
+            # Parse quantity as potential fraction
+            quantity_str = ingredient_data.get('quantity', '')
+            quantity_float, numerator, denominator, is_fraction = parse_fraction(str(quantity_str))
+
             recipe_ingredient = RecipeIngredient(
                 recipe_id=recipe.id,
                 ingredient_id=ingredient.id,
-                quantity=float(ingredient_data['quantity']) if ingredient_data.get('quantity') else None,
-                unit=ingredient_data.get('unit', '')
+                quantity=quantity_float,
+                unit=ingredient_data.get('unit', ''),
+                size=ingredient_data.get('size', ''),
+                descriptor=ingredient_data.get('descriptor', ''),
+                additional_descriptor=ingredient_data.get('additional_descriptor', ''),
+                is_fraction=is_fraction,
+                quantity_numerator=numerator,
+                quantity_denominator=denominator
             )
             db.session.add(recipe_ingredient)
 
@@ -180,7 +197,7 @@ def update_recipe(recipe_id):
 
         # Update recipe fields
         recipe.name = data['name']
-        recipe.cook_time = int(data['cook_time']) if data['cook_time'] else None
+        recipe.cook_time = data['cook_time'] if data['cook_time'] else None
         recipe.servings = int(data['servings']) if data['servings'] else None
         recipe.instructions = data['instructions']
 
@@ -200,7 +217,6 @@ def update_recipe(recipe_id):
         logger.debug(f"Sub-recipes: {sub_recipes}")
         
         # Clear existing ingredients and components to rebuild them
-        # This approach is simpler and less error-prone for this specific case
         RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
         RecipeComponent.query.filter_by(recipe_id=recipe.id).delete()
         
@@ -217,16 +233,22 @@ def update_recipe(recipe_id):
                 db.session.add(ingredient)
                 db.session.flush()
             
+            # Parse quantity as potential fraction
+            quantity_str = ingredient_data.get('quantity', '')
+            quantity_float, numerator, denominator, is_fraction = parse_fraction(str(quantity_str))
+            
             # Create the recipe ingredient
-            # Inside update_recipe function, when processing regular ingredients
             recipe_ingredient = RecipeIngredient(
                 recipe_id=recipe.id,
                 ingredient_id=ingredient.id,
-                quantity=float(ingredient_data.get('quantity', 0)) if ingredient_data.get('quantity') else None,
+                quantity=quantity_float,
                 unit=ingredient_data.get('unit', ''),
-                size=ingredient_data.get('size', ''),  # Add this line
-                descriptor=ingredient_data.get('descriptor', ''),  # Add this line
-                additional_descriptor=ingredient_data.get('additional_descriptor', '')  # Add this line
+                size=ingredient_data.get('size', ''),
+                descriptor=ingredient_data.get('descriptor', ''),
+                additional_descriptor=ingredient_data.get('additional_descriptor', ''),
+                is_fraction=is_fraction,
+                quantity_numerator=numerator,
+                quantity_denominator=denominator
             )
             db.session.add(recipe_ingredient)
         
@@ -235,12 +257,16 @@ def update_recipe(recipe_id):
             sub_recipe_id = sub_recipe_data.get('sub_recipe_id')
             if not sub_recipe_id:
                 continue  # Skip invalid sub-recipes
+            
+            # Parse quantity as potential fraction for sub-recipes
+            quantity_str = sub_recipe_data.get('quantity', '1')
+            quantity_float, _, _, _ = parse_fraction(str(quantity_str))
                 
             # Create the component
             component = RecipeComponent(
                 recipe_id=recipe.id,
                 sub_recipe_id=sub_recipe_id,
-                quantity=float(sub_recipe_data.get('quantity', 1)) if sub_recipe_data.get('quantity') else 1.0
+                quantity=quantity_float or 1.0
             )
             db.session.add(component)
 
@@ -478,6 +504,8 @@ def delete_store(store_id):
     db.session.commit()
     return jsonify({'message': 'Store deleted successfully'})
 
+# In routes.py
+# Update the get_categorized_grocery_list function
 @grocery_routes.route('/api/grocery_list', methods=['GET'])
 def get_categorized_grocery_list():
     try:
@@ -491,31 +519,113 @@ def get_categorized_grocery_list():
         if not weekly_plan:
             return jsonify({'error': 'Weekly plan not found'}), 404
 
-        # Assuming default store if no store ID provided
-        store_id = request.args.get('store_id')
-        store = Store.query.get(store_id) if store_id else Store.query.filter_by(is_default=True).first()
+        # Get all ingredients from the weekly plan
+        all_ingredients = []
+        for meal in weekly_plan.meals:
+            if meal.recipe_id:
+                ingredients = get_recipe_ingredients(meal.recipe_id)
+                all_ingredients.extend(ingredients)
 
-        if not store:
-            return jsonify({'error': 'Store not found'}), 404
+        # Consolidate ingredients by name and unit
+        ingredient_map = {}
+        for ingredient in all_ingredients:
+            key = (ingredient['item_name'], ingredient.get('unit', ''))
+            if key not in ingredient_map:
+                ingredient_map[key] = ingredient.copy()
+            else:
+                # Add quantities
+                if ingredient.get('is_fraction') and ingredient_map[key].get('is_fraction'):
+                    # Handle fractions
+                    result = combine_quantities([
+                        ingredient_map[key],
+                        ingredient
+                    ])
+                    ingredient_map[key].update(result)
+                else:
+                    # Simple addition for regular quantities
+                    ingredient_map[key]['quantity'] += ingredient.get('quantity', 0)
 
-        sections = Section.query.filter_by(store_id=store.id).order_by(Section.order).all()
-        logger.debug(f"Store used for sections: {store.name}")
+        # Convert back to list
+        consolidated_ingredients = list(ingredient_map.values())
+
+        # Get all sections
+        sections = Section.query.order_by(Section.order).all()
+        
+        # Create the categorized grocery list
         categorized_list = []
-
-        for section in sections:
-            logger.debug(f"Processing section: {section.name}")
-            items = IngredientSection.query.filter_by(section_id=section.id).all()
-            logger.debug(f"Items in section {section.name}: {[item.ingredient.item_name for item in items if item.ingredient]}")
+        uncategorized_items = []
+        
+        # Check each ingredient and assign to appropriate section
+        for ingredient in consolidated_ingredients:
+            ingredient_id = ingredient.get('id')
+            ingredient_name = ingredient.get('item_name')
+            
+            # Try to find the ingredient in the database
+            db_ingredient = None
+            if ingredient_id:
+                db_ingredient = Ingredient.query.get(ingredient_id)
+            
+            if not db_ingredient and ingredient_name:
+                db_ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+            
+            # Find the section for this ingredient
+            section = None
+            if db_ingredient:
+                ingredient_section = IngredientSection.query.filter_by(ingredient_id=db_ingredient.id).first()
+                if ingredient_section:
+                    section = ingredient_section.section
+            
+            # Format the ingredient display
+            display_item = {
+                'id': ingredient.get('id'),
+                'name': ingredient.get('item_name'),
+                'quantity': ingredient.get('quantity'),
+                'unit': ingredient.get('unit', ''),
+                'is_fraction': ingredient.get('is_fraction', False)
+            }
+            
+            # Add fraction string if available
+            if ingredient.get('is_fraction') and ingredient.get('quantity_numerator') and ingredient.get('quantity_denominator'):
+                numerator = ingredient['quantity_numerator']
+                denominator = ingredient['quantity_denominator']
+                
+                if numerator >= denominator:
+                    whole_part = numerator // denominator
+                    remainder = numerator % denominator
+                    if remainder == 0:
+                        display_item['fraction_str'] = str(whole_part)
+                    else:
+                        display_item['fraction_str'] = f"{whole_part} {remainder}/{denominator}"
+                else:
+                    display_item['fraction_str'] = f"{numerator}/{denominator}"
+            
+            # Add to appropriate section or uncategorized
+            if section:
+                # Find or create section in result
+                section_entry = next(
+                    (s for s in categorized_list if s['section'] == section.name),
+                    None
+                )
+                
+                if not section_entry:
+                    section_entry = {'section': section.name, 'items': []}
+                    categorized_list.append(section_entry)
+                
+                section_entry['items'].append(display_item)
+            else:
+                uncategorized_items.append(display_item)
+        
+        # Add uncategorized section at the end if needed
+        if uncategorized_items:
             categorized_list.append({
-                'section': section.name,
-                'items': [
-                    {
-                        'name': item.ingredient.item_name,
-                        'quantity': item.ingredient.quantity,
-                        'unit': item.ingredient.unit
-                    } for item in items if item.ingredient
-                ]
+                'section': 'Uncategorized',
+                'items': uncategorized_items
             })
+        
+        # Sort sections by store order
+        section_order = {section.name: section.order for section in sections}
+        categorized_list.sort(key=lambda x: section_order.get(x['section'], float('inf')))
+        
         logger.debug(f"Response being returned: {categorized_list}")
         return jsonify({'grocery_list': categorized_list})
 
@@ -557,17 +667,10 @@ def grocery_list():
         logger.error(f"Error rendering grocery list page: {e}")
         return "An error occurred while rendering the page", 500
 
+# In routes.py
+# Update get_recipe_ingredients to include fraction data
 def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
-    """Recursively get all ingredients for a recipe, including from sub-recipes.
-    
-    Args:
-        recipe_id: The ID of the recipe to get ingredients for
-        quantity_multiplier: A multiplier to apply to ingredient quantities (for sub-recipes)
-        visited: Set of already visited recipe IDs to prevent infinite loops
-    
-    Returns:
-        List of ingredient dictionaries
-    """
+    """Recursively get all ingredients for a recipe, including from sub-recipes."""
     if visited is None:
         visited = set()
     
@@ -585,13 +688,45 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
     # Add direct ingredients
     for ingredient in recipe.ingredients:
         if ingredient.ingredient:  # Regular ingredient
+            quantity_info = {
+                'quantity': (ingredient.quantity or 0) * quantity_multiplier,
+                'is_fraction': ingredient.is_fraction
+            }
+            
+            # Handle fractions
+            if ingredient.is_fraction and ingredient.quantity_numerator is not None and ingredient.quantity_denominator is not None:
+                # Scale the fraction by the multiplier
+                numerator = int(ingredient.quantity_numerator * quantity_multiplier)
+                denominator = ingredient.quantity_denominator
+                quantity_info['quantity_numerator'] = numerator
+                quantity_info['quantity_denominator'] = denominator
+                
+                # Generate a display string for the fraction
+                if numerator >= denominator:
+                    whole_part = numerator // denominator
+                    remainder = numerator % denominator
+                    if remainder == 0:
+                        fraction_display = str(whole_part)
+                    else:
+                        fraction_display = f"{whole_part} {remainder}/{denominator}"
+                else:
+                    fraction_display = f"{numerator}/{denominator}"
+                    
+                precision_text = f"({fraction_display} {ingredient.unit or ''})"
+            else:
+                # Handle regular decimal quantities
+                precision_text = f"({(ingredient.quantity or 0) * quantity_multiplier} {ingredient.unit or ''})"
+                
             result.append({
                 "id": ingredient.ingredient.id,
                 "item_name": ingredient.ingredient.name,
                 "quantity": (ingredient.quantity or 0) * quantity_multiplier,
                 "unit": ingredient.unit or "",
                 "main_text": ingredient.ingredient.name,
-                "precision_text": f"({(ingredient.quantity or 0) * quantity_multiplier} {ingredient.unit or ''})"
+                "precision_text": precision_text,
+                "is_fraction": ingredient.is_fraction,
+                "quantity_numerator": ingredient.quantity_numerator,
+                "quantity_denominator": ingredient.quantity_denominator
             })
     
     # Add ingredients from sub-recipes
@@ -601,7 +736,7 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
             sub_ingredients = get_recipe_ingredients(
                 component.sub_recipe_id, 
                 quantity_multiplier * sub_quantity,
-                visited.copy()  # Pass a copy to avoid modifying the original
+                visited.copy()
             )
             result.extend(sub_ingredients)
     
@@ -624,27 +759,18 @@ def get_grocery_list_json():
         logger.info(f"Weekly plan found: {weekly_plan.name}")
 
         # Gather ingredients
-        ingredients = {}
+        all_ingredients = []
         for meal in weekly_plan.meals:
             if meal.recipe_id:
-                recipe = Recipe.query.get(meal.recipe_id)
-                if recipe:
-                    logger.info(f"Processing recipe: {recipe.name}")
-                    for ingredient in recipe.ingredients:
-                        key = (ingredient.item_name, ingredient.unit or "unitless")
-                        ingredients[key] = ingredients.get(key, 0) + (ingredient.quantity or 0)
+                ingredients = get_recipe_ingredients(meal.recipe_id)
+                all_ingredients.extend(ingredients)
 
-        logger.info(f"Collected ingredients: {ingredients}")
-
-        # Format ingredients
-        formatted_ingredients = [
-            {"item_name": name, "unit": unit, "quantity": round(quantity, 2)}
-            for (name, unit), quantity in ingredients.items()
-        ]
-
-        logger.info(f"Formatted ingredients: {formatted_ingredients}")
-
-        return jsonify(formatted_ingredients)
+        # Map ingredients to sections and format as expected by the frontend
+        grocery_list = map_ingredients_to_sections(all_ingredients)
+        
+        # Return in the format expected by the frontend
+        return jsonify({"grocery_list": grocery_list})
+        
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}")
         return jsonify({"error": "An error occurred while generating the grocery list"}), 500
@@ -665,9 +791,14 @@ def map_ingredients_to_sections(ingredients):
         else:
             section_name = "Uncategorized"
 
+        # Update this part to match what the frontend expects
         section_dict.setdefault(section_name, []).append({
-            "main_text": ingredient["main_text"],
-            "precision_text": ingredient["precision_text"],
+            "name": ingredient["main_text"],  # Change main_text to name
+            "quantity": ingredient.get("quantity", 0),
+            "unit": ingredient.get("unit", ""),
+            "fraction_str": ingredient.get("fraction_str"),
+            # Keep precision_text for backward compatibility
+            "precision_text": ingredient.get("precision_text")
         })
 
     return [{"section": name, "items": items} for name, items in section_dict.items()]
@@ -824,3 +955,311 @@ def check_circular_reference():
         'circular': is_circular,
         'message': 'Adding this sub-recipe would create a circular reference' if is_circular else 'No circular reference detected'
     })
+
+@meal_planner_routes.route('/api/weekly_plan/<int:plan_id>', methods=['GET'])
+def get_weekly_plan(plan_id):
+    """Get details for a specific weekly plan."""
+    try:
+        plan = WeeklyPlan.query.get_or_404(plan_id)
+        
+        # Get meal slots
+        meal_slots = MealSlot.query.filter_by(weekly_plan_id=plan_id).all()
+        
+        # Calculate ingredient count safely
+        try:
+            ingredient_count = plan.ingredient_count
+        except Exception as e:
+            logger.error(f"Error calculating ingredient count: {e}")
+            ingredient_count = 0
+        
+        return jsonify({
+            'id': plan.id,
+            'name': plan.name,
+            'created_at': plan.created_at.isoformat() if plan.created_at else None,
+            'updated_at': plan.updated_at.isoformat() if plan.updated_at else None,
+            'meals': [meal.to_dict() for meal in meal_slots],
+            'ingredient_count': ingredient_count
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching weekly plan {plan_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@meal_planner_routes.route('/api/weekly_plan/<int:plan_id>', methods=['DELETE'])
+def delete_weekly_plan(plan_id):
+    """Delete a weekly plan."""
+    try:
+        plan = WeeklyPlan.query.get_or_404(plan_id)
+        
+        # Delete will cascade to meal slots due to relationship definition
+        db.session.delete(plan)
+        db.session.commit()
+        
+        return jsonify({"message": "Weekly plan deleted successfully"}), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting weekly plan {plan_id}: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@meal_planner_routes.route('/api/weekly_plan/<int:plan_id>/update', methods=['PUT'])
+def update_weekly_plan(plan_id):
+    """Update an existing weekly plan."""
+    try:
+        plan = WeeklyPlan.query.get_or_404(plan_id)
+        
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Update plan name if provided
+        if 'name' in data:
+            plan.name = data['name']
+            
+        # Update meals if provided
+        if 'meals' in data:
+            # Delete existing meal slots
+            MealSlot.query.filter_by(weekly_plan_id=plan_id).delete()
+            
+            # Add new meal slots
+            for meal in data['meals']:
+                meal_slot = MealSlot(
+                    weekly_plan_id=plan_id,
+                    day=meal['day'],
+                    meal_type=meal['meal_type'],
+                    recipe_id=meal.get('recipe_id')
+                )
+                db.session.add(meal_slot)
+                
+        # Update timestamp
+        plan.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Weekly plan updated successfully",
+            "id": plan.id
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error updating weekly plan {plan_id}: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+def parse_fraction(fraction_str):
+    """Parse a fraction string into numerator and denominator."""
+    if not fraction_str or fraction_str.strip() == '':
+        return None, None, None, False
+        
+    # Remove any extra whitespace
+    fraction_str = str(fraction_str).strip()
+    
+    # Check if it's a simple number
+    try:
+        return float(fraction_str), None, None, False
+    except ValueError:
+        pass
+        
+    # Try to parse as fraction
+    try:
+        # Check for mixed number format like "1 1/2"
+        mixed_match = re.match(r'(\d+)\s+(\d+)/(\d+)', fraction_str)
+        if mixed_match:
+            whole = int(mixed_match.group(1))
+            numerator = int(mixed_match.group(2))
+            denominator = int(mixed_match.group(3))
+            # Convert to improper fraction
+            numerator = whole * denominator + numerator
+            return float(numerator) / float(denominator), numerator, denominator, True
+            
+        # Check for simple fraction like "1/2"
+        fraction_match = re.match(r'(\d+)/(\d+)', fraction_str)
+        if fraction_match:
+            numerator = int(fraction_match.group(1))
+            denominator = int(fraction_match.group(2))
+            return float(numerator) / float(denominator), numerator, denominator, True
+            
+        # Convert string to Fraction object
+        frac = Fraction(fraction_str)
+        return float(frac), frac.numerator, frac.denominator, True
+    except (ValueError, ZeroDivisionError):
+        return None, None, None, False
+    
+def combine_quantities(quantities):
+    """Combine a list of quantities, handling fractions properly."""
+    total = 0
+    numerator_sum = 0
+    denominator = None
+    has_fraction = False
+    
+    for qty in quantities:
+        if isinstance(qty, dict):  # Handle dictionary format
+            if qty.get('is_fraction') and qty.get('quantity_numerator') and qty.get('quantity_denominator'):
+                has_fraction = True
+                num = qty['quantity_numerator']
+                den = qty['quantity_denominator']
+                
+                if denominator is None:
+                    denominator = den
+                    numerator_sum = num
+                else:
+                    # Convert to common denominator
+                    lcm = (denominator * den) // math.gcd(denominator, den)
+                    numerator_sum = (numerator_sum * (lcm // denominator)) + (num * (lcm // den))
+                    denominator = lcm
+            else:
+                total += qty.get('quantity', 0)
+        else:  # Handle numeric values
+            total += qty
+    
+    if has_fraction:
+        # Convert total to fraction with the same denominator
+        if denominator:
+            numerator_sum += int(total * denominator)
+            # Simplify the fraction
+            gcd = math.gcd(numerator_sum, denominator)
+            return {
+                'quantity': float(numerator_sum / denominator),
+                'is_fraction': True,
+                'quantity_numerator': numerator_sum // gcd,
+                'quantity_denominator': denominator // gcd
+            }
+    
+    return {'quantity': total, 'is_fraction': False}
+
+# In routes.py
+# Add a route to save ingredient-to-section mappings
+@store_routes.route('/api/save_ingredient_sections', methods=['POST'])
+def save_ingredient_sections():
+    """Save ingredient-to-section mappings with custom ordering."""
+    try:
+        data = request.get_json()
+        if not data or 'sections' not in data:
+            return jsonify({"error": "No section data provided"}), 400
+            
+        # Clear existing mappings if specified
+        if data.get('clear_existing', False):
+            IngredientSection.query.delete()
+            
+        # Process each section and its ingredients
+        for section_data in data['sections']:
+            section_id = section_data.get('id')
+            section_name = section_data.get('name')
+            ingredients = section_data.get('ingredients', [])
+            
+            # Get or create the section
+            section = None
+            if section_id:
+                section = Section.query.get(section_id)
+            
+            if not section and section_name:
+                # Check if section exists by name
+                section = Section.query.filter_by(name=section_name).first()
+                
+                if not section:
+                    # Create new section
+                    store_id = data.get('store_id', 1)  # Default to store ID 1 if not specified
+                    section_order = Section.query.filter_by(store_id=store_id).count()
+                    section = Section(name=section_name, order=section_order, store_id=store_id)
+                    db.session.add(section)
+                    db.session.flush()
+            
+            if not section:
+                continue
+                
+            # Process ingredients for this section
+            for i, ingredient_data in enumerate(ingredients):
+                ingredient_id = ingredient_data.get('id')
+                ingredient_name = ingredient_data.get('name')
+                
+                # Get or create the ingredient
+                ingredient = None
+                if ingredient_id:
+                    ingredient = Ingredient.query.get(ingredient_id)
+                
+                if not ingredient and ingredient_name:
+                    ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+                    
+                    if not ingredient:
+                        ingredient = Ingredient(name=ingredient_name)
+                        db.session.add(ingredient)
+                        db.session.flush()
+                
+                if not ingredient:
+                    continue
+                    
+                # Check if mapping already exists
+                mapping = IngredientSection.query.filter_by(
+                    ingredient_id=ingredient.id,
+                    section_id=section.id
+                ).first()
+                
+                if mapping:
+                    # Update existing mapping
+                    mapping.order = i
+                else:
+                    # Create new mapping
+                    mapping = IngredientSection(
+                        ingredient_id=ingredient.id,
+                        section_id=section.id,
+                        order=i
+                    )
+                    db.session.add(mapping)
+        
+        db.session.commit()
+        return jsonify({"message": "Ingredient sections saved successfully"})
+        
+    except Exception as e:
+        logger.error(f"Error saving ingredient sections: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+    # In routes.py
+# Add this route to get ingredient sections by store
+@store_routes.route('/api/ingredient_sections', methods=['GET'])
+def get_ingredient_sections():
+    """Get all ingredient-to-section mappings for a store."""
+    try:
+        store_id = request.args.get('store_id')
+        if not store_id:
+            return jsonify({"error": "Store ID is required"}), 400
+            
+        # Get sections for this store
+        sections = Section.query.filter_by(store_id=store_id).all()
+        section_ids = [section.id for section in sections]
+        
+        # Get ingredient mappings for these sections
+        mappings = IngredientSection.query.filter(IngredientSection.section_id.in_(section_ids)).all()
+        
+        result = [{
+            'id': mapping.id,
+            'ingredient_id': mapping.ingredient_id,
+            'section_id': mapping.section_id,
+            'order': mapping.order
+        } for mapping in mappings]
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error getting ingredient sections: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+    # In routes.py
+# Add this route to get sections for a store
+@store_routes.route('/api/stores/<int:store_id>/sections', methods=['GET'])
+def get_store_sections(store_id):
+    """Get all sections for a specific store."""
+    try:
+        sections = Section.query.filter_by(store_id=store_id).order_by(Section.order).all()
+        
+        result = [{
+            'id': section.id,
+            'name': section.name,
+            'order': section.order
+        } for section in sections]
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error getting store sections: {e}")
+        return jsonify({"error": str(e)}), 500

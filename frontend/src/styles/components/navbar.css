@@ -1,0 +1,107 @@
+/* Navbar component styles */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: var(--background-dark);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.app-title {
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  color: white;
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.nav-link {
+  color: #00aeff;
+  text-decoration: none;
+  padding: var(--spacing-sm) 12px;
+  border-radius: var(--border-radius-sm);
+  transition: background-color 0.3s;
+}
+
+.nav-link:hover {
+  background-color: var(--primary-color);
+  color: #004e72;
+}
+
+/* Dropdown styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropbtn {
+  color: #00aeff;
+  background: none;
+  border: none;
+  padding: var(--spacing-sm) 12px;
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: background-color 0.3s;
+}
+
+.dropbtn:hover {
+  background-color: var(--primary-color);
+  color: #004e72;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #00aeff;
+  min-width: 200px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.dropdown-content a {
+  color: var(--text-color);
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  transition: background-color 0.2s;
+}
+
+.dropdown-content a:hover {
+  background-color: var(--background-light);
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    padding: var(--spacing-md);
+  }
+  
+  .app-title {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .dropdown-content {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    margin-top: var(--spacing-sm);
+  }
+}
