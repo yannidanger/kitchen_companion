@@ -6,19 +6,22 @@ from app.utils import logger
 
 ingredient_routes = Blueprint('ingredient_routes', __name__)
 
-
-
-
 @ingredient_routes.route('/api/ingredients', methods=['GET'])
 def get_ingredients():
     """Get all ingredients."""
     try:
-        ingredients = Ingredient.query.all()
-        ingredients_list = [ingredient.to_dict() for ingredient in ingredients]
+        # Add a filter parameter to exclude sub-recipes
+        exclude_subrec = request.args.get('exclude_subrec', 'false').lower() == 'true'
         
-        # If no ingredients in database, return an empty list
-        if not ingredients_list:
-            return jsonify([])
+        ingredients = Ingredient.query.all()
+        ingredients_list = []
+        
+        for ingredient in ingredients:
+            # Skip empty names or those that appear to be sub-recipes
+            if not ingredient.name or (exclude_subrec and any(term in ingredient.name.lower() for term in ['sauce', 'dough', 'mixture'])):
+                continue
+                
+            ingredients_list.append(ingredient.to_dict())
         
         return jsonify(ingredients_list)
     except Exception as e:

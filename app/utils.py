@@ -11,6 +11,23 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
+def deduplicate_ingredients(ingredients_list):
+    """Deduplicate ingredients in grocery list to avoid showing duplicates."""
+    unique_items = {}
+    
+    for item in ingredients_list:
+        item_name = item.get('name', '').lower()
+        
+        if not item_name:
+            continue
+            
+        # If we haven't seen this ingredient yet, add it
+        if item_name not in unique_items:
+            unique_items[item_name] = item
+    
+    return list(unique_items.values())
+
 # Function to validate recipe payload
 def validate_recipe_payload(data):
     required_fields = ['name', 'ingredients']
@@ -242,7 +259,7 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
     
     return result
 
-def map_ingredients_to_sections(ingredients):
+def map_ingredients_to_sections(ingredients, store_id=None):
     """Maps ingredients to store sections with proper ordering."""
     logger.debug(f"Mapping {len(ingredients)} ingredients to sections")
     # Get default store ID (for simplicity)
@@ -344,25 +361,31 @@ def map_ingredients_to_sections(ingredients):
             # No mapping found
             uncategorized_items.append(display_item)
     
-    # Convert to list format expected by frontend
-    result = []
-    
-    # Add sections with items
-    for section_id, section_data in section_dict.items():
-        if section_data['items']:
+        # Convert to list format expected by frontend
+        result = []
+
+        # Add sections with items
+        for section_id, section_data in section_dict.items():
+            if section_data['items']:
+                # Deduplicate the items in this section
+                section_data['items'] = deduplicate_ingredients(section_data['items'])
+                
+                result.append({
+                    "section": section_data['name'],
+                    "order": section_data['order'],
+                    "items": section_data['items']
+                })
+
+        # Add uncategorized section if it has items
+        if uncategorized_items:
+            # Deduplicate uncategorized items too
+            uncategorized_items = deduplicate_ingredients(uncategorized_items)
+            
             result.append({
-                "section": section_data['name'],
-                "order": section_data['order'],
-                "items": section_data['items']
+                "section": "Uncategorized",
+                "order": 999,
+                "items": uncategorized_items
             })
-    
-    # Add uncategorized section if it has items
-    if uncategorized_items:
-        result.append({
-            "section": "Uncategorized",
-            "order": 999,
-            "items": uncategorized_items
-        })
     
     # Sort sections by order
     result.sort(key=lambda x: x.get('order', 999))

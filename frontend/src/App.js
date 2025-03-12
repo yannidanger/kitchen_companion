@@ -9,7 +9,7 @@ import WeeklyPlanner from "./pages/WeeklyPlanner";
 import GroceryListView from "./pages/GroceryListView";
 import GroceryListPreview from "./pages/GroceryListPreview";
 import SavedGroceryLists from "./pages/SavedGroceryLists";
-import StoreOrganizer from './components/StoreOrganizerFixed';
+import StoreOrganizer from './components/storeorganizer/storeOrganizerSimple';
 import "./styles/main.css";
 
 function App() {
