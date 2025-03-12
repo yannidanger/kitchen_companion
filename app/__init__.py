@@ -34,9 +34,9 @@ def create_app():
     from app.routes import meal_planner_routes
     app.register_blueprint(meal_planner_routes)
     from app.routes import store_routes
-    app.register_blueprint(store_routes, url_prefix='/stores')
+    app.register_blueprint(store_routes)
     from app.routes import ingredient_routes
-    app.register_blueprint(ingredient_routes, url_prefix='/ingredients')
+    app.register_blueprint(ingredient_routes)
     from app.routes import grocery_routes
     app.register_blueprint(grocery_routes, url_prefix='/grocery')
     from app.routes import sub_recipes_bp

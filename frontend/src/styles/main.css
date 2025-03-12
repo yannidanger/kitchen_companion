@@ -8,6 +8,7 @@
 @import './components/forms.css';
 @import './components/navbar.css';
 @import './components/recipeTreeView.css';
+@import './components/storeOrganizer.css';
 
 /* Import page styles */
 @import './pages/recipes.css';

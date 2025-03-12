@@ -30,41 +30,60 @@ function GroceryListView() {
     }
   }, [planId, location.state]);
 
-const fetchGroceryListForPlan = async (id) => {
-  try {
-    setLoading(true);
+  // In GroceryListView.js
 
-    // First, fetch plan details
-    const planResponse = await fetch(`http://127.0.0.1:5000/api/weekly_plan/${id}`);
-    if (!planResponse.ok) {
-      throw new Error("Failed to fetch plan details");
+  // Update the fetchGroceryListForPlan function
+  const fetchGroceryListForPlan = async (id) => {
+    try {
+      setLoading(true);
+
+      // First, fetch plan details
+      const planResponse = await fetch(`http://127.0.0.1:5000/api/weekly_plan/${id}`);
+      if (!planResponse.ok) {
+        throw new Error("Failed to fetch plan details");
+      }
+
+      const planData = await planResponse.json();
+      setPlanDetails({
+        ...planData,
+        isTemporary: false
+      });
+
+      // Then fetch grocery list
+      const groceryResponse = await fetch(`http://127.0.0.1:5000/api/grocery_list?weekly_plan_id=${id}`);
+      if (!groceryResponse.ok) {
+        throw new Error("Failed to fetch grocery list");
+      }
+
+      const groceryData = await groceryResponse.json();
+
+      // Sort the grocery list by section order if available
+      const sortedList = groceryData.grocery_list.sort((a, b) => {
+        // Put Uncategorized at the end
+        if (a.section === "Uncategorized") return 1;
+        if (b.section === "Uncategorized") return -1;
+
+        // Sort by order if available
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+
+        // Fall back to alphabetical order
+        return a.section.localeCompare(b.section);
+      });
+
+      setGroceryList(sortedList || []);
+      console.log("Grocery list data:", sortedList);
+      setLoading(false);
+
+    } catch (err) {
+      console.error("Error fetching grocery list:", err);
+      setError(err.message);
+      setLoading(false);
     }
+  };
 
-    const planData = await planResponse.json();
-    setPlanDetails({
-      ...planData,
-      isTemporary: false
-    });
-
-    // Then fetch grocery list
-    const groceryResponse = await fetch(`http://127.0.0.1:5000/api/grocery_list?weekly_plan_id=${id}`);
-    if (!groceryResponse.ok) {
-      throw new Error("Failed to fetch grocery list");
-    }
-
-    const groceryData = await groceryResponse.json();
-    // Extract the grocery_list array from the response
-    setGroceryList(groceryData.grocery_list || []);
-    console.log("Grocery list data:", groceryData.grocery_list);
-    setLoading(false);
-
-  } catch (err) {
-    console.error("Error fetching grocery list:", err);
-    setError(err.message);
-    setLoading(false);
-  }
-};
-
+  // Update the generateGroceryListFromMeals function similarly
   const generateGroceryListFromMeals = async (meals) => {
     try {
       setLoading(true);
@@ -85,7 +104,23 @@ const fetchGroceryListForPlan = async (id) => {
       }
 
       const data = await response.json();
-      setGroceryList(data.grocery_list || []);
+
+      // Sort the grocery list by section order if available
+      const sortedList = data.grocery_list.sort((a, b) => {
+        // Put Uncategorized at the end
+        if (a.section === "Uncategorized") return 1;
+        if (b.section === "Uncategorized") return -1;
+
+        // Sort by order if available
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+
+        // Fall back to alphabetical order
+        return a.section.localeCompare(b.section);
+      });
+
+      setGroceryList(sortedList || []);
       setLoading(false);
 
     } catch (err) {
@@ -205,7 +240,7 @@ const fetchGroceryListForPlan = async (id) => {
 
           <button
             className="organize-btn"
-            onClick={() => navigate('/organize-store')}>
+            onClick={() => navigate('/store-organizer')}>
             Organize Sections
           </button>
 

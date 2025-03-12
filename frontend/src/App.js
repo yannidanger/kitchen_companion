@@ -9,7 +9,7 @@ import WeeklyPlanner from "./pages/WeeklyPlanner";
 import GroceryListView from "./pages/GroceryListView";
 import GroceryListPreview from "./pages/GroceryListPreview";
 import SavedGroceryLists from "./pages/SavedGroceryLists";
-import StoreOrganizer from './components/StoreOrganizer';
+import StoreOrganizer from './components/StoreOrganizerFixed';
 import "./styles/main.css";
 
 function App() {
@@ -27,7 +27,7 @@ function App() {
             <Route path="/grocery-list/:planId" element={<GroceryListView />} />
             <Route path="/grocery-list-preview" element={<GroceryListPreview />} />
             <Route path="/saved-grocery-lists" element={<SavedGroceryLists />} />
-            <Route path="/organize-store" element={<StoreOrganizer />} />
+            <Route path="/store-organizer" element={<StoreOrganizer />} />
           </Routes>
         </div>
       </div>

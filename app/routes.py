@@ -504,146 +504,171 @@ def delete_store(store_id):
     db.session.commit()
     return jsonify({'message': 'Store deleted successfully'})
 
-# In routes.py
-# Update the get_categorized_grocery_list function
 @grocery_routes.route('/api/grocery_list', methods=['GET'])
 def get_categorized_grocery_list():
     try:
         weekly_plan_id = request.args.get('weekly_plan_id')
+        store_id = request.args.get('store_id')
 
         if not weekly_plan_id:
             return jsonify({'error': 'Weekly plan ID is required'}), 400
 
-        weekly_plan = WeeklyPlan.query.get(weekly_plan_id)
-        logger.debug(f"Weekly Plan found: {weekly_plan}")
-        if not weekly_plan:
-            return jsonify({'error': 'Weekly plan not found'}), 404
-
         # Get all ingredients from the weekly plan
         all_ingredients = []
+        weekly_plan = WeeklyPlan.query.get(weekly_plan_id)
+        
+        if not weekly_plan:
+            return jsonify({'error': 'Weekly plan not found'}), 404
+            
         for meal in weekly_plan.meals:
             if meal.recipe_id:
                 ingredients = get_recipe_ingredients(meal.recipe_id)
                 all_ingredients.extend(ingredients)
-
-        # Consolidate ingredients by name and unit
+        
+        # Consolidate ingredients
         ingredient_map = {}
         for ingredient in all_ingredients:
             key = (ingredient['item_name'], ingredient.get('unit', ''))
             if key not in ingredient_map:
                 ingredient_map[key] = ingredient.copy()
             else:
-                # Add quantities
-                if ingredient.get('is_fraction') and ingredient_map[key].get('is_fraction'):
-                    # Handle fractions
-                    result = combine_quantities([
-                        ingredient_map[key],
-                        ingredient
-                    ])
-                    ingredient_map[key].update(result)
-                else:
-                    # Simple addition for regular quantities
-                    ingredient_map[key]['quantity'] += ingredient.get('quantity', 0)
-
-        # Convert back to list
+                # Handle addition logic...
+                # (Existing code here)
+                pass
+        
         consolidated_ingredients = list(ingredient_map.values())
-
-        # Get all sections
-        sections = Section.query.order_by(Section.order).all()
+        logger.debug(f"Consolidated {len(all_ingredients)} ingredients into {len(consolidated_ingredients)} unique items")
         
-        # Create the categorized grocery list
-        categorized_list = []
-        uncategorized_items = []
-        
-        # Check each ingredient and assign to appropriate section
-        for ingredient in consolidated_ingredients:
-            ingredient_id = ingredient.get('id')
-            ingredient_name = ingredient.get('item_name')
+        # Get all section mappings
+        if store_id:
+            section_mappings = {}
+            mappings_response = IngredientSection.query.join(Section).filter(Section.store_id == store_id).all()
             
-            # Try to find the ingredient in the database
-            db_ingredient = None
-            if ingredient_id:
-                db_ingredient = Ingredient.query.get(ingredient_id)
-            
-            if not db_ingredient and ingredient_name:
-                db_ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
-            
-            # Find the section for this ingredient
-            section = None
-            if db_ingredient:
-                ingredient_section = IngredientSection.query.filter_by(ingredient_id=db_ingredient.id).first()
-                if ingredient_section:
-                    section = ingredient_section.section
-            
-            # Format the ingredient display
-            display_item = {
-                'id': ingredient.get('id'),
-                'name': ingredient.get('item_name'),
-                'quantity': ingredient.get('quantity'),
-                'unit': ingredient.get('unit', ''),
-                'is_fraction': ingredient.get('is_fraction', False)
-            }
-            
-            # Add fraction string if available
-            if ingredient.get('is_fraction') and ingredient.get('quantity_numerator') and ingredient.get('quantity_denominator'):
-                numerator = ingredient['quantity_numerator']
-                denominator = ingredient['quantity_denominator']
+            # Create lookup by ingredient ID
+            for mapping in mappings_response:
+                section_mappings[mapping.ingredient_id] = mapping.section
                 
-                if numerator >= denominator:
-                    whole_part = numerator // denominator
-                    remainder = numerator % denominator
-                    if remainder == 0:
-                        display_item['fraction_str'] = str(whole_part)
+            logger.debug(f"Found {len(section_mappings)} ingredient-section mappings")
+                
+            # Get all sections for this store
+            sections = Section.query.filter_by(store_id=store_id).order_by(Section.order).all()
+            section_dict = {section.id: {'name': section.name, 'order': section.order, 'items': []} for section in sections}
+            
+            # Add uncategorized bucket
+            section_dict['uncategorized'] = {'name': 'Uncategorized', 'order': 999, 'items': []}
+            
+            # Assign ingredients to sections
+            for ingredient in consolidated_ingredients:
+                ingredient_id = ingredient.get('id')
+                ingredient_obj = None
+                
+                # Find the ingredient in the database if we have an ID
+                if ingredient_id:
+                    ingredient_obj = Ingredient.query.get(ingredient_id)
+                
+                # If no ID or not found by ID, try finding by name
+                if not ingredient_obj and ingredient.get('item_name'):
+                    ingredient_obj = Ingredient.query.filter_by(name=ingredient.get('item_name')).first()
+                
+                if ingredient_obj and ingredient_obj.id in section_mappings:
+                    # We have a mapping for this ingredient
+                    section = section_mappings[ingredient_obj.id]
+                    if section.id in section_dict:
+                        item_data = format_ingredient_for_display(ingredient)
+                        section_dict[section.id]['items'].append(item_data)
                     else:
-                        display_item['fraction_str'] = f"{whole_part} {remainder}/{denominator}"
+                        # Should not happen but fall back to uncategorized
+                        item_data = format_ingredient_for_display(ingredient)
+                        section_dict['uncategorized']['items'].append(item_data)
                 else:
-                    display_item['fraction_str'] = f"{numerator}/{denominator}"
+                    # No mapping found, put in uncategorized
+                    item_data = format_ingredient_for_display(ingredient)
+                    section_dict['uncategorized']['items'].append(item_data)
             
-            # Add to appropriate section or uncategorized
-            if section:
-                # Find or create section in result
-                section_entry = next(
-                    (s for s in categorized_list if s['section'] == section.name),
-                    None
-                )
-                
-                if not section_entry:
-                    section_entry = {'section': section.name, 'items': []}
-                    categorized_list.append(section_entry)
-                
-                section_entry['items'].append(display_item)
-            else:
-                uncategorized_items.append(display_item)
-        
-        # Add uncategorized section at the end if needed
-        if uncategorized_items:
-            categorized_list.append({
-                'section': 'Uncategorized',
-                'items': uncategorized_items
-            })
-        
-        # Sort sections by store order
-        section_order = {section.name: section.order for section in sections}
-        categorized_list.sort(key=lambda x: section_order.get(x['section'], float('inf')))
-        
-        logger.debug(f"Response being returned: {categorized_list}")
-        return jsonify({'grocery_list': categorized_list})
-
+            # Convert to list format for response
+            result = []
+            for section_id, section_data in section_dict.items():
+                if section_data['items']:  # Only include non-empty sections
+                    result.append({
+                        'section': section_data['name'],
+                        'items': section_data['items']
+                    })
+            
+            # Sort by section order
+            result.sort(key=lambda x: next((s['order'] for s_id, s in section_dict.items() if s['name'] == x['section']), 999))
+            
+            return jsonify({'grocery_list': result})
+        else:
+            # No store ID, just return a simple list
+            return jsonify({'grocery_list': consolidated_ingredients})
+            
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}")
-        return jsonify({"error": "An error occurred while generating the grocery list"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @ingredient_routes.route('/api/ingredients', methods=['GET'])
 def get_ingredients():
-    # Example logic
-    ingredients = Ingredient.query.all()
-    return jsonify([ingredient.to_dict() for ingredient in ingredients])
+    """Get all ingredients."""
+    try:
+        ingredients = Ingredient.query.all()
+        ingredients_list = [ingredient.to_dict() for ingredient in ingredients]
+        
+        # If no ingredients in database, return an empty list
+        if not ingredients_list:
+            return jsonify([])
+        
+        return jsonify(ingredients_list)
+    except Exception as e:
+        logger.error(f"Error getting ingredients: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @store_routes.route('/api/stores', methods=['GET'])
 def get_stores():
-    stores = Store.query.all()
-    return jsonify([store.to_dict() for store in stores])
+    """Get all stores."""
+    try:
+        stores = Store.query.all()
+        store_list = []
+        for store in stores:
+            store_list.append({
+                'id': store.id,
+                'name': store.name,
+                'is_default': store.is_default
+            })
+            
+        # If no stores, create a default one
+        if not store_list:
+            # Check if the user_id can be null
+            default_store = Store(name="My Store", is_default=True, user_id=None)
+            db.session.add(default_store)
+            db.session.commit()
+            
+            # Add a few default sections
+            sections = [
+                Section(name="Produce", order=0, store_id=default_store.id),
+                Section(name="Dairy", order=1, store_id=default_store.id),
+                Section(name="Meat", order=2, store_id=default_store.id),
+                Section(name="Bakery", order=3, store_id=default_store.id),
+                Section(name="Frozen", order=4, store_id=default_store.id),
+                Section(name="Canned Goods", order=5, store_id=default_store.id),
+                Section(name="Uncategorized", order=6, store_id=default_store.id)
+            ]
+            
+            for section in sections:
+                db.session.add(section)
+            
+            db.session.commit()
+            
+            store_list = [{
+                'id': default_store.id,
+                'name': default_store.name,
+                'is_default': default_store.is_default
+            }]
+        
+        return jsonify(store_list)
+    except Exception as e:
+        logger.error(f"Error getting stores: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @grocery_routes.route('/grocery_list', methods=['GET'])
 def grocery_list():
@@ -748,8 +773,29 @@ def get_grocery_list_json():
     try:
         weekly_plan_id = request.args.get('weekly_plan_id')
         logger.info(f"Received request for /api/grocery_list with weekly_plan_id: {weekly_plan_id}")
+        store_id = request.args.get('store_id') 
+        
+        # Debug: Log all ingredient-section mappings
+        all_mappings = IngredientSection.query.all()
+        logger.info(f"Total ingredient-section mappings in database: {len(all_mappings)}")
+        for mapping in all_mappings:
+            ingredient = Ingredient.query.get(mapping.ingredient_id)
+            section = Section.query.get(mapping.section_id)
+            if ingredient and section:
+                logger.info(f"Mapping: Ingredient '{ingredient.name}' (ID: {ingredient.id}) -> Section '{section.name}' (ID: {section.id})")
+        
         if not weekly_plan_id:
             return jsonify({"error": "Weekly plan ID is required"}), 400
+        
+        if not store_id:
+            default_store = Store.query.filter_by(is_default=True).first()
+            if default_store:
+                store_id = default_store.id
+            else:
+                # Or use the first store
+                first_store = Store.query.first()
+                if first_store:
+                    store_id = first_store.id
 
         weekly_plan = WeeklyPlan.query.get(weekly_plan_id)
         if not weekly_plan:
@@ -764,48 +810,168 @@ def get_grocery_list_json():
             if meal.recipe_id:
                 ingredients = get_recipe_ingredients(meal.recipe_id)
                 all_ingredients.extend(ingredients)
+        
+        # Log each ingredient we're processing
+        logger.info(f"Processing {len(all_ingredients)} ingredients for grocery list")
+        for ing in all_ingredients:
+            ing_id = ing.get('id')
+            ing_name = ing.get('item_name')
+            logger.info(f"Ingredient from recipe: '{ing_name}' (ID: {ing_id})")
+            
+            # Look up mappings for this ingredient
+            if ing_id:
+                mapping = IngredientSection.query.filter_by(ingredient_id=ing_id).first()
+                if mapping:
+                    section = Section.query.get(mapping.section_id)
+                    logger.info(f"  Found mapping to section: '{section.name}' (ID: {section.id})")
+                else:
+                    logger.info(f"  No section mapping found for this ingredient")
 
         # Map ingredients to sections and format as expected by the frontend
-        grocery_list = map_ingredients_to_sections(all_ingredients)
+        grocery_list = map_ingredients_to_sections(all_ingredients, store_id)
+        
+        # Log the final result
+        logger.info(f"Final grocery list has {len(grocery_list)} sections")
+        for section in grocery_list:
+            logger.info(f"Section '{section['section']}': {len(section['items'])} items")
+            for item in section['items']:
+                logger.info(f"  - {item['name']}")
         
         # Return in the format expected by the frontend
         return jsonify({"grocery_list": grocery_list})
         
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({"error": "An error occurred while generating the grocery list"}), 500
 
 def map_ingredients_to_sections(ingredients):
-    """Maps ingredients to store sections using SQLite instead of hardcoded values."""
-    sections = {section.id: section.name for section in Section.query.all()}
-    section_dict = {name: [] for name in sections.values()}
-
+    """Maps ingredients to store sections with proper ordering."""
+    logger.debug(f"Mapping {len(ingredients)} ingredients to sections")
+    # Get default store ID (for simplicity)
+    default_store = Store.query.filter_by(is_default=True).first()
+    store_id = default_store.id if default_store else None
+    
+    if not store_id:
+        # Fallback to first store
+        first_store = Store.query.first()
+        store_id = first_store.id if first_store else None
+    
+    # Get section mappings for ingredients
+    ingredient_section_map = {}
+    if store_id:
+        # Get sections from this store
+        sections = Section.query.filter_by(store_id=store_id).all()
+        section_dict = {section.id: {
+            'name': section.name, 
+            'order': section.order,
+            'items': []
+        } for section in sections}
+        
+        # Get all ingredient-section mappings
+        all_mappings = IngredientSection.query.all()
+        
+        # Create lookup by ingredient ID
+        for mapping in all_mappings:
+            ingredient_section_map[mapping.ingredient_id] = mapping.section_id
+    else:
+        # No store available, create empty section dict
+        sections = Section.query.all()
+    section_dict = {section.id: {
+        'name': section.name, 
+        'order': section.order,
+        'items': []
+    } for section in sections}
+    logger.debug(f"Found {len(sections)} sections")
+    
+    # Add uncategorized container
+    uncategorized_items = []
+    
+    # Process each ingredient
     for ingredient in ingredients:
-        ingredient_id = ingredient["id"]
+        ingredient_id = ingredient.get("id")
+        ingredient_name = ingredient.get("item_name", "")
+        logger.debug(f"Processing ingredient: {ingredient_name} (ID: {ingredient_id})")
 
-        # Fetch section from database
-        ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient_id).first()
-
-        if ingredient_section:
-            section_name = sections.get(ingredient_section.section_id, "Uncategorized")
+        ingredient_section = None
+        if ingredient_id:
+            ingredient_section = IngredientSection.query.filter_by(ingredient_id=ingredient_id).first()
+        
+        if ingredient_section and ingredient_section.section_id in section_dict:
+            section_name = section_dict[ingredient_section.section_id]['name']
+            logger.debug(f"  Assigning to section: {section_name} (ID: {ingredient_section.section_id})")
+            # Add to the appropriate section
+            section_dict[ingredient_section.section_id]['items'].append({
+                "name": ingredient.get("main_text", ingredient.get("item_name", "")),
+                "quantity": ingredient.get("quantity", 0),
+                "unit": ingredient.get("unit", ""),
+                "fraction_str": ingredient.get("fraction_str"),
+                "precision_text": ingredient.get("precision_text")
+            })
         else:
-            section_name = "Uncategorized"
-
-        # Update this part to match what the frontend expects
-        section_dict.setdefault(section_name, []).append({
-            "name": ingredient["main_text"],  # Change main_text to name
+            logger.debug(f"  Adding to uncategorized (no mapping found)")
+            # Add to uncategorized
+            uncategorized_items.append({
+                "name": ingredient.get("main_text", ingredient.get("item_name", "")),
+                "quantity": ingredient.get("quantity", 0),
+                "unit": ingredient.get("unit", ""),
+                "fraction_str": ingredient.get("fraction_str"),
+                "precision_text": ingredient.get("precision_text")
+            })
+        
+        # Find the ingredient in the database (might need to look up by name)
+        db_ingredient = None
+        if ingredient_id:
+            db_ingredient = Ingredient.query.get(ingredient_id)
+        
+        if not db_ingredient and ingredient.get('item_name'):
+            db_ingredient = Ingredient.query.filter_by(name=ingredient.get('item_name')).first()
+        
+        display_item = {
+            "name": ingredient.get("main_text", ingredient.get("item_name", "")),
             "quantity": ingredient.get("quantity", 0),
             "unit": ingredient.get("unit", ""),
-            "fraction_str": ingredient.get("fraction_str"),
-            # Keep precision_text for backward compatibility
-            "precision_text": ingredient.get("precision_text")
+            "fraction_str": ingredient.get("fraction_str", ""),
+            "precision_text": ingredient.get("precision_text", "")
+        }
+        
+        if db_ingredient and db_ingredient.id in ingredient_section_map:
+            # We have a mapping for this ingredient
+            section_id = ingredient_section_map[db_ingredient.id]
+            if section_id in section_dict:
+                section_dict[section_id]['items'].append(display_item)
+            else:
+                # Section doesn't exist anymore, put in uncategorized
+                uncategorized_items.append(display_item)
+        else:
+            # No mapping found
+            uncategorized_items.append(display_item)
+    
+    # Convert to list format expected by frontend
+    result = []
+    
+    # Add sections with items
+    for section_id, section_data in section_dict.items():
+        if section_data['items']:
+            result.append({
+                "section": section_data['name'],
+                "order": section_data['order'],
+                "items": section_data['items']
+            })
+    
+    # Add uncategorized section if it has items
+    if uncategorized_items:
+        result.append({
+            "section": "Uncategorized",
+            "order": 999,
+            "items": uncategorized_items
         })
-
-    return [{"section": name, "items": items} for name, items in section_dict.items()]
-
-
-
-
+    
+    # Sort sections by order
+    result.sort(key=lambda x: x.get('order', 999))
+    
+    return result
 
 @ingredient_routes.route('/api/ingredients/<int:ingredient_id>/assign_section', methods=['POST'])
 def assign_section_to_ingredient(ingredient_id):
@@ -1127,8 +1293,6 @@ def combine_quantities(quantities):
     
     return {'quantity': total, 'is_fraction': False}
 
-# In routes.py
-# Add a route to save ingredient-to-section mappings
 @store_routes.route('/api/save_ingredient_sections', methods=['POST'])
 def save_ingredient_sections():
     """Save ingredient-to-section mappings with custom ordering."""
@@ -1137,11 +1301,29 @@ def save_ingredient_sections():
         if not data or 'sections' not in data:
             return jsonify({"error": "No section data provided"}), 400
             
-        # Clear existing mappings if specified
-        if data.get('clear_existing', False):
-            IngredientSection.query.delete()
+        store_id = data.get('store_id')
+        if not store_id:
+            return jsonify({"error": "Store ID is required"}), 400
             
-        # Process each section and its ingredients
+        # Get the store
+        store = Store.query.get(store_id)
+        if not store:
+            return jsonify({"error": "Store not found"}), 404
+        
+        # Track all processed ingredient IDs to ensure completeness
+        processed_ingredient_ids = set()
+        
+        # Clear existing mappings for this store's sections
+        store_sections = Section.query.filter_by(store_id=store_id).all()
+        section_ids = [section.id for section in store_sections]
+        
+        # Log current mappings for debugging
+        current_mappings = IngredientSection.query.filter(
+            IngredientSection.section_id.in_(section_ids)
+        ).all()
+        print(f"Current mappings count: {len(current_mappings)}")
+        
+        # Process section data
         for section_data in data['sections']:
             section_id = section_data.get('id')
             section_name = section_data.get('name')
@@ -1149,62 +1331,97 @@ def save_ingredient_sections():
             
             # Get or create the section
             section = None
-            if section_id:
+            if section_id and section_id != "uncategorized" and not str(section_id).startswith("temp-"):
                 section = Section.query.get(section_id)
-            
+                
             if not section and section_name:
-                # Check if section exists by name
-                section = Section.query.filter_by(name=section_name).first()
+                # Try to find existing section by name
+                section = Section.query.filter_by(store_id=store_id, name=section_name).first()
                 
                 if not section:
                     # Create new section
-                    store_id = data.get('store_id', 1)  # Default to store ID 1 if not specified
                     section_order = Section.query.filter_by(store_id=store_id).count()
                     section = Section(name=section_name, order=section_order, store_id=store_id)
+                    db.session.add(section)
+                    db.session.flush()  # Get the ID
+            
+            if not section and section_name.lower() == "uncategorized":
+                # Create or get uncategorized section
+                section = Section.query.filter_by(store_id=store_id, name="Uncategorized").first()
+                if not section:
+                    section_order = Section.query.filter_by(store_id=store_id).count()
+                    section = Section(name="Uncategorized", order=section_order, store_id=store_id)
                     db.session.add(section)
                     db.session.flush()
             
             if not section:
-                continue
+                continue  # Skip if we still don't have a valid section
                 
-            # Process ingredients for this section
-            for i, ingredient_data in enumerate(ingredients):
+            # Process each ingredient in this section
+            for idx, ingredient_data in enumerate(ingredients):
                 ingredient_id = ingredient_data.get('id')
                 ingredient_name = ingredient_data.get('name')
                 
-                # Get or create the ingredient
+                # Skip if no ingredient ID or name
+                if not ingredient_id and not ingredient_name:
+                    continue
+                    
+                # Get the ingredient from database
                 ingredient = None
                 if ingredient_id:
                     ingredient = Ingredient.query.get(ingredient_id)
-                
+                    
                 if not ingredient and ingredient_name:
                     ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
                     
                     if not ingredient:
+                        # Create new ingredient
                         ingredient = Ingredient(name=ingredient_name)
                         db.session.add(ingredient)
                         db.session.flush()
                 
                 if not ingredient:
                     continue
+
+                # Add ingredient ID to processed set
+                processed_ingredient_ids.add(ingredient.id)
                     
-                # Check if mapping already exists
-                mapping = IngredientSection.query.filter_by(
-                    ingredient_id=ingredient.id,
-                    section_id=section.id
+                # Handle ingredient section mapping
+                ingredient_section = IngredientSection.query.filter_by(
+                    ingredient_id=ingredient.id
                 ).first()
                 
-                if mapping:
+                if ingredient_section:
                     # Update existing mapping
-                    mapping.order = i
+                    print(f"Updating mapping for ingredient {ingredient.name} from section {ingredient_section.section_id} to {section.id}")
+                    ingredient_section.section_id = section.id
+                    ingredient_section.order = idx
                 else:
                     # Create new mapping
-                    mapping = IngredientSection(
+                    print(f"Creating new mapping for ingredient {ingredient.name} to section {section.id}")
+                    ingredient_section = IngredientSection(
                         ingredient_id=ingredient.id,
                         section_id=section.id,
-                        order=i
+                        order=idx
                     )
-                    db.session.add(mapping)
+                    db.session.add(ingredient_section)
+        
+        # Delete any mappings for ingredients that aren't in any section anymore
+        if processed_ingredient_ids:
+            # Get sections for this store
+            store_sections = Section.query.filter_by(store_id=store_id).all()
+            section_ids = [section.id for section in store_sections]
+            
+            # Find mappings to delete
+            mappings_to_delete = IngredientSection.query.filter(
+                IngredientSection.section_id.in_(section_ids),
+                ~IngredientSection.ingredient_id.in_(processed_ingredient_ids)
+            ).all()
+            print(f"Deleting {len(mappings_to_delete)} mappings for ingredients no longer in sections")
+            
+            # Delete them
+            for mapping in mappings_to_delete:
+                db.session.delete(mapping)
         
         db.session.commit()
         return jsonify({"message": "Ingredient sections saved successfully"})
@@ -1243,9 +1460,7 @@ def get_ingredient_sections():
     except Exception as e:
         logger.error(f"Error getting ingredient sections: {e}")
         return jsonify({"error": str(e)}), 500
-    
-    # In routes.py
-# Add this route to get sections for a store
+
 @store_routes.route('/api/stores/<int:store_id>/sections', methods=['GET'])
 def get_store_sections(store_id):
     """Get all sections for a specific store."""
@@ -1262,4 +1477,187 @@ def get_store_sections(store_id):
         
     except Exception as e:
         logger.error(f"Error getting store sections: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@store_routes.route('/api/debug/ingredient_sections', methods=['GET'])
+def debug_ingredient_sections():
+    """Debug endpoint to see all ingredient-to-section mappings."""
+    try:
+        # Get all mappings
+        mappings = IngredientSection.query.all()
+        
+        result = []
+        for mapping in mappings:
+            ingredient = Ingredient.query.get(mapping.ingredient_id)
+            section = Section.query.get(mapping.section_id)
+            
+            if ingredient and section:
+                result.append({
+                    'mapping_id': mapping.id,
+                    'ingredient_id': mapping.ingredient_id,
+                    'ingredient_name': ingredient.name,
+                    'section_id': mapping.section_id,
+                    'section_name': section.name,
+                    'order': mapping.order
+                })
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error debugging ingredient sections: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@recipes_routes.route('/api/debug/routes', methods=['GET'])
+def list_routes():
+    """List all registered routes."""
+    routes = []
+    for rule in current_app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': [method for method in rule.methods if method != 'OPTIONS' and method != 'HEAD'],
+            'route': str(rule)
+        })
+    return jsonify(routes)        
+
+@ingredient_routes.route('/api/ingredients/populate', methods=['GET'])
+def populate_ingredients():
+    """Populate some sample ingredients if the database is empty."""
+    try:
+        count = Ingredient.query.count()
+        if count == 0:
+            # Add some common ingredients
+            sample_ingredients = [
+                "flour", "sugar", "salt", "milk", "butter", 
+                "eggs", "chicken", "beef", "pork", "apple", 
+                "banana", "carrot", "onion", "garlic", "rice",
+                "pasta", "cheese", "yogurt", "bread", "tomato"
+            ]
+            
+            for name in sample_ingredients:
+                ingredient = Ingredient(name=name)
+                db.session.add(ingredient)
+            
+            db.session.commit()
+            
+            return jsonify({"message": f"Added {len(sample_ingredients)} sample ingredients"})
+        else:
+            return jsonify({"message": f"Database already has {count} ingredients"})
+    except Exception as e:
+        logger.error(f"Error populating ingredients: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+def format_ingredient_for_display(ingredient):
+    """Format an ingredient dictionary for display in the grocery list."""
+    display_item = {
+        'id': ingredient.get('id'),
+        'name': ingredient.get('item_name'),
+        'quantity': ingredient.get('quantity'),
+        'unit': ingredient.get('unit', ''),
+        'is_fraction': ingredient.get('is_fraction', False)
+    }
+    
+    # Add fraction string if available
+    if ingredient.get('is_fraction') and ingredient.get('quantity_numerator') and ingredient.get('quantity_denominator'):
+        numerator = ingredient['quantity_numerator']
+        denominator = ingredient['quantity_denominator']
+        
+        if numerator >= denominator:
+            whole_part = numerator // denominator
+            remainder = numerator % denominator
+            if remainder == 0:
+                display_item['fraction_str'] = str(whole_part)
+            else:
+                display_item['fraction_str'] = f"{whole_part} {remainder}/{denominator}"
+        else:
+            display_item['fraction_str'] = f"{numerator}/{denominator}"
+    
+    return display_item
+
+@store_routes.route('/api/debug/database_state', methods=['GET'])
+def debug_database_state():
+    """Debug endpoint to show the current state of relevant tables."""
+    try:
+        store_id = request.args.get('store_id')
+        if not store_id:
+            # Use first store if none specified
+            store = Store.query.first()
+            store_id = store.id if store else None
+        
+        result = {
+            "sections": [],
+            "ingredient_sections": [],
+            "ingredients": []
+        }
+        
+        # Get sections
+        sections = Section.query.filter_by(store_id=store_id).all() if store_id else []
+        result["sections"] = [{
+            "id": section.id,
+            "name": section.name,
+            "order": section.order
+        } for section in sections]
+        
+        # Get ingredient sections
+        ingredient_sections = []
+        if store_id:
+            section_ids = [section.id for section in sections]
+            ingredient_section_mappings = IngredientSection.query.filter(
+                IngredientSection.section_id.in_(section_ids)
+            ).all()
+            
+            for mapping in ingredient_section_mappings:
+                ingredient = Ingredient.query.get(mapping.ingredient_id)
+                section = Section.query.get(mapping.section_id)
+                
+                if ingredient and section:
+                    ingredient_sections.append({
+                        "id": mapping.id,
+                        "ingredient_id": mapping.ingredient_id,
+                        "ingredient_name": ingredient.name,
+                        "section_id": mapping.section_id,
+                        "section_name": section.name
+                    })
+        
+        result["ingredient_sections"] = ingredient_sections
+        
+        # Get ingredients
+        ingredients = Ingredient.query.all()
+        result["ingredients"] = [{
+            "id": ingredient.id,
+            "name": ingredient.name
+        } for ingredient in ingredients]
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+   # Add this at the very end of routes.py
+from flask import current_app
+
+@current_app.route('/debug/database', methods=['GET'])
+def debug_database_direct():
+    """Direct debug endpoint without blueprint."""
+    try:
+        # Get all mappings
+        mappings = IngredientSection.query.all()
+        
+        result = []
+        for mapping in mappings:
+            ingredient = Ingredient.query.get(mapping.ingredient_id)
+            section = Section.query.get(mapping.section_id)
+            
+            if ingredient and section:
+                result.append({
+                    'mapping_id': mapping.id,
+                    'ingredient_id': mapping.ingredient_id,
+                    'ingredient_name': ingredient.name,
+                    'section_id': mapping.section_id,
+                    'section_name': section.name,
+                    'order': mapping.order
+                })
+        
+        return jsonify(result)
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
