@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app import db
 from app.models import Store, Section, IngredientSection
 from app.utils import logger
+import re
 
 store_routes = Blueprint('store_routes', __name__)
 
@@ -154,6 +155,9 @@ def save_ingredient_sections():
         store_id = data['store_id']
         sections_data = data['sections']
         
+        # Get all section IDs for this store
+        store_section_ids = [section.id for section in Section.query.filter_by(store_id=store_id).all()]
+        
         # Get the store
         store = Store.query.get_or_404(store_id)
         
@@ -172,22 +176,32 @@ def save_ingredient_sections():
             db.session.add(uncategorized_section)
             db.session.flush()
             
-        # Get all section IDs for this store
-        store_section_ids = [section.id for section in Section.query.filter_by(store_id=store_id).all()]
-        
         # Clear all existing mappings for this store's sections
         if store_section_ids:
             IngredientSection.query.filter(
                 IngredientSection.section_id.in_(store_section_ids)
             ).delete(synchronize_session=False)
         
-        # Track processed section names to avoid duplicates
+        # Track processed section names to avoid duplicates (use lowercase for case-insensitive comparison)
         processed_section_names = {"uncategorized"}
         
         # Process regular sections
         for section_data in sections_data:
+            # Sanitize and standardize section name
+            section_name = section_data.get('name', '').strip()
+            
+            # Standardize the section name: Title case with proper spacing
+            # Replace multiple spaces with a single space
+            section_name = re.sub(r'\s+', ' ', section_name)
+            
+            # Apply title case, but preserve common abbreviations
+            section_name = section_name.title()
+            
+            # Skip empty sections
+            if not section_name:
+                continue
+                
             section_id = section_data.get('id')
-            section_name = section_data.get('name')
             ingredients = section_data.get('ingredients', [])
             
             # Skip empty temporary sections
@@ -208,7 +222,7 @@ def save_ingredient_sections():
                 if section_id and not str(section_id).startswith('temp-'):
                     section = Section.query.get(section_id)
                     if section:
-                        section.name = section_name
+                        section.name = section_name  # Use standardized name
                     else:
                         section = Section(name=section_name, store_id=store_id, order=0)
                         db.session.add(section)
@@ -262,5 +276,24 @@ def reorder_sections(store_id):
         
     except Exception as e:
         logger.error(f"Error reordering sections: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@store_routes.route('/api/stores/<int:store_id>/set-default', methods=['POST'])
+def set_default_store(store_id):
+    try:
+        # Clear default flag from all stores first
+        Store.query.update({Store.is_default: False})
+        
+        # Set the requested store as default
+        store = Store.query.get(store_id)
+        if not store:
+            return jsonify({"error": "Store not found"}), 404
+            
+        store.is_default = True
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": f"{store.name} set as default store"})
+    except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

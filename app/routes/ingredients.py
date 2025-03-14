@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app import db
-from app.models import Ingredient,IngredientSection, Section
+from app.models import Ingredient, IngredientSection, Section, RecipeIngredient
 from app.utils import logger
 
 
@@ -17,8 +17,19 @@ def get_ingredients():
         ingredients_list = []
         
         for ingredient in ingredients:
-            # Skip empty names or those that appear to be sub-recipes
-            if not ingredient.name or (exclude_subrec and any(term in ingredient.name.lower() for term in ['sauce', 'dough', 'mixture'])):
+            # Skip if it's a sub-recipe
+            if exclude_subrec:
+                # Check if this ingredient is used as a sub-recipe in any RecipeIngredient
+                is_subrecipe = db.session.query(RecipeIngredient).filter(
+                    RecipeIngredient.sub_recipe_id.isnot(None),
+                    RecipeIngredient.ingredient_id == ingredient.id
+                ).first() is not None
+                
+                if is_subrecipe:
+                    continue
+                    
+            # Skip empty names
+            if not ingredient.name:
                 continue
                 
             ingredients_list.append(ingredient.to_dict())

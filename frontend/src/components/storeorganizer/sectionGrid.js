@@ -10,11 +10,31 @@ const SectionGrid = ({
     selectAllInSection,
     removeSection
 }) => {
-    // Get all available ingredients across all sections and uncategorized
-    const allIngredients = [
-        ...getUncategorizedIngredients(),
-        ...sections.flatMap(section => getIngredientsForSection(section.id))
-    ];
+    // Define the function before using it
+    const getUniqueIngredients = () => {
+        // Create a map to track which sections each ingredient is in
+        const sectionMap = {};
+        
+        // Map ingredients to their sections
+        sections.forEach(section => {
+            const sectionIngredients = getIngredientsForSection(section.id);
+            sectionIngredients.forEach(ing => {
+                if (!sectionMap[ing.id]) {
+                    sectionMap[ing.id] = [];
+                }
+                sectionMap[ing.id].push(section.name);
+            });
+        });
+        
+        // For debugging
+        console.log("Section mapping:", sectionMap);
+        
+        // Return ingredients that aren't in any section
+        return getUncategorizedIngredients();
+    };
+
+    // Only declare this once
+    const allIngredients = getUniqueIngredients();
 
     // Filter out duplicate Uncategorized sections
     const uniqueSections = sections.filter((section, index, self) => {
@@ -23,6 +43,8 @@ const SectionGrid = ({
             s.name.toLowerCase() === section.name.toLowerCase()
         );
     });
+
+    // Rest of your component...
 
     return (
         <div className="organizer-content">

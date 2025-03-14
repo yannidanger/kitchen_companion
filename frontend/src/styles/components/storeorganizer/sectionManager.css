@@ -1,0 +1,82 @@
+/* Section management components */
+.add-section-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .add-section-form input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 200px;
+  }
+  
+  /* Section header */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .section-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+  }
+  
+  .section-actions {
+    display: flex;
+    gap: 5px;
+  }
+  
+  /* Remove section button */
+  .remove-section-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  /* Grid header styles */
+  .section-grid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  
+  .section-grid-header h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+  
+  /* Empty section message */
+  .empty-section {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+  }
+  
+  @media (max-width: 768px) {
+    .add-section-form {
+      width: 100%;
+    }
+  }

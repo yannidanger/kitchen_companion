@@ -8,7 +8,13 @@
 @import './components/forms.css';
 @import './components/navbar.css';
 @import './components/recipeTreeView.css';
-@import './components/storeOrganizer.css';
+/* Import store organizer components */
+@import './components/storeorganizer/storeOrganizerBase.css';
+@import './components/storeorganizer/storeSelector.css';
+@import './components/storeorganizer/sectionManager.css';
+@import './components/storeorganizer/ingredientMover.css';
+@import './components/storeorganizer/sectionGrid.css';
+@import './components/storeorganizer/groceryItem.css';
 
 /* Import page styles */
 @import './pages/recipes.css';

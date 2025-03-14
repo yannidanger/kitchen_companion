@@ -328,3 +328,116 @@
     margin-top: var(--spacing-sm);
   }
 }
+/* Reordering styles */
+.reordering-actions {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #fffde7;
+  border-left: 4px solid #ffd600;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.save-order-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.reorder-btn {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.reorder-btn.active {
+  background-color: #f57c00;
+}
+
+.sections-container.reordering {
+  padding: 10px 0;
+}
+
+.grocery-section.reorderable {
+  padding: 15px;
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: grab;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.grocery-section.reorderable:active {
+  cursor: grabbing;
+}
+
+.item-count {
+  background-color: #2196F3;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.reorder-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.move-up-btn, .move-down-btn {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.move-up-btn:hover, .move-down-btn:hover {
+  background-color: #0d8aee;
+}
+
+.move-up-btn:disabled, .move-down-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.grocery-section.reorderable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.grocery-section.reorderable .item-count {
+  background-color: #2196F3;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-left: auto;
+  margin-right: 10px;
+}

@@ -5,32 +5,61 @@ const IngredientMover = ({
     targetSection, 
     setTargetSection, 
     moveSelectedIngredients, 
-    clearSelections 
+    clearSelections,
+    selectedIngredients = {} // Add this prop
 }) => {
+    // Count selected ingredients
+    const selectedCount = Object.values(selectedIngredients).filter(Boolean).length;
+
     return (
-        <div className="movement-controls">
-            <h3>Move Selected Ingredients</h3>
-            <div className="control-row">
-                <select
-                    value={targetSection}
-                    onChange={(e) => setTargetSection(e.target.value)}
-                >
-                    <option value="">Select Target Section</option>
-                    {sections.map(section => (
-                        <option key={section.id} value={section.id}>
-                            {section.name}
-                        </option>
-                    ))}
-                </select>
-                <button
-                    onClick={moveSelectedIngredients}
-                    disabled={!targetSection}
-                >
-                    Move Selected
-                </button>
-                <button onClick={clearSelections}>
-                    Clear Selection
-                </button>
+        <div className="ingredient-mover">
+            <div className="mover-heading">
+                <h3>Move Ingredients Between Sections</h3>
+                <div className="selection-counter">
+                    {selectedCount} selected
+                </div>
+            </div>
+            
+            <div className="mover-controls">
+                <div className="target-section-selector">
+                    <label htmlFor="target-section">Move selected ingredients to:</label>
+                    <select
+                        id="target-section"
+                        value={targetSection}
+                        onChange={(e) => setTargetSection(e.target.value)}
+                    >
+                        <option value="">Select a section</option>
+                        {sections.map(section => (
+                            <option key={section.id} value={section.id}>
+                                {section.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+                <div className="mover-buttons">
+                    <button 
+                        className="move-btn"
+                        onClick={moveSelectedIngredients}
+                        disabled={!targetSection || selectedCount === 0}
+                    >
+                        Move Selected
+                    </button>
+                    
+                    <button 
+                        className="clear-btn"
+                        onClick={clearSelections}
+                        disabled={selectedCount === 0}
+                    >
+                        Clear Selection
+                    </button>
+                </div>
+            </div>
+
+            <div className="mover-instructions">
+                <p>1. Check the ingredients you want to organize</p>
+                <p>2. Select a destination section from the dropdown</p>
+                <p>3. Click "Move Selected" to reorganize your ingredients</p>
             </div>
         </div>
     );

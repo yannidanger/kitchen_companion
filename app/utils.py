@@ -28,6 +28,16 @@ def deduplicate_ingredients(ingredients_list):
     
     return list(unique_items.values())
 
+def deduplicate_sections(sections_list):
+    """Remove duplicate sections based on section name (case-insensitive)."""
+    unique_sections = {}
+    for section in sections_list:
+        section_name = section['section'].lower()
+        if section_name not in unique_sections or section['order'] < unique_sections[section_name]['order']:
+            unique_sections[section_name] = section
+    
+    return list(unique_sections.values())
+
 # Function to validate recipe payload
 def validate_recipe_payload(data):
     required_fields = ['name', 'ingredients']
@@ -204,12 +214,16 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
     
     # Add direct ingredients
     for ingredient in recipe.ingredients:
+        # Skip sub-recipe references (only include actual ingredients)
+        if ingredient.sub_recipe_id:
+            continue
+            
         if ingredient.ingredient:  # Regular ingredient
             quantity_info = {
                 'quantity': (ingredient.quantity or 0) * quantity_multiplier,
                 'is_fraction': ingredient.is_fraction
             }
-            
+        
             # Handle fractions
             if ingredient.is_fraction and ingredient.quantity_numerator is not None and ingredient.quantity_denominator is not None:
                 # Scale the fraction by the multiplier
@@ -262,6 +276,7 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
 def map_ingredients_to_sections(ingredients, store_id=None):
     """Maps ingredients to store sections with proper ordering."""
     logger.debug(f"Mapping {len(ingredients)} ingredients to sections")
+    ingredients = [ing for ing in ingredients if not ing.get('sub_recipe_id')]
     # Get default store ID (for simplicity)
     default_store = Store.query.filter_by(is_default=True).first()
     store_id = default_store.id if default_store else None
@@ -333,13 +348,17 @@ def map_ingredients_to_sections(ingredients, store_id=None):
                 "precision_text": ingredient.get("precision_text")
             })
         
+        # In utils.py, modify the map_ingredients_to_sections function to add case-insensitive matching:
+
         # Find the ingredient in the database (might need to look up by name)
         db_ingredient = None
         if ingredient_id:
             db_ingredient = Ingredient.query.get(ingredient_id)
-        
+
         if not db_ingredient and ingredient.get('item_name'):
-            db_ingredient = Ingredient.query.filter_by(name=ingredient.get('item_name')).first()
+            # Use case-insensitive matching
+            name_to_search = ingredient.get('item_name', '').lower().strip()
+            db_ingredient = Ingredient.query.filter(Ingredient.name.ilike(f"%{name_to_search}%")).first()
         
         display_item = {
             "name": ingredient.get("main_text", ingredient.get("item_name", "")),
@@ -417,4 +436,20 @@ def format_ingredient_for_display(ingredient):
         else:
             display_item['fraction_str'] = f"{numerator}/{denominator}"
     
+    # Create a formatted_quantity field that combines quantity and unit
+    if display_item.get('fraction_str') and display_item.get('unit'):
+        display_item['formatted_quantity'] = f"{display_item['fraction_str']} {display_item['unit']}"
+    elif display_item.get('fraction_str'):
+        display_item['formatted_quantity'] = display_item['fraction_str']
+    elif display_item.get('quantity') is not None and display_item.get('unit'):
+        # Format the decimal nicely (remove trailing zeros)
+        quantity_str = str(display_item['quantity']).rstrip('0').rstrip('.') if '.' in str(display_item['quantity']) else str(display_item['quantity'])
+        display_item['formatted_quantity'] = f"{quantity_str} {display_item['unit']}"
+    elif display_item.get('quantity') is not None:
+        quantity_str = str(display_item['quantity']).rstrip('0').rstrip('.') if '.' in str(display_item['quantity']) else str(display_item['quantity'])
+        display_item['formatted_quantity'] = quantity_str
+    else:
+        display_item['formatted_quantity'] = ""
+        
     return display_item
+

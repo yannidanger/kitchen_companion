@@ -2,6 +2,9 @@ import React from "react";
 
 const SectionManager = ({ newSectionName, setNewSectionName, addNewSection }) => {
     const handleSubmit = () => {
+        if (!newSectionName.trim()) {
+            return; // Don't submit empty names
+        }
         addNewSection(newSectionName);
         setNewSectionName("");
     };

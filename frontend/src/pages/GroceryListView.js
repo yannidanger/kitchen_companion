@@ -11,6 +11,8 @@ function GroceryListView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
 
   useEffect(() => {
     if (planId) {
@@ -30,7 +32,62 @@ function GroceryListView() {
     }
   }, [planId, location.state]);
 
-  // In GroceryListView.js
+  const saveNewSectionOrder = async () => {
+    try {
+      if (!selectedStore) {
+        // Fetch store if not already selected
+        const storesResponse = await fetch('http://127.0.0.1:5000/api/stores');
+        const storesData = await storesResponse.json();
+  
+        if (storesData.length === 0) {
+          alert('No stores available to save section order');
+          return;
+        }
+  
+        const defaultStore = storesData.find(store => store.is_default) || storesData[0];
+        setSelectedStore(defaultStore.id);
+  
+        // Pass the reordered section IDs
+        const sectionIds = groceryList
+          .filter(section => section.sectionId) // Only include sections with IDs
+          .map(section => section.sectionId);
+        await reorderSections(defaultStore.id, sectionIds);
+      } else {
+        const sectionIds = groceryList
+          .filter(section => section.sectionId) // Only include sections with IDs
+          .map(section => section.sectionId);
+        await reorderSections(selectedStore, sectionIds);
+      }
+  
+      setIsReordering(false);
+      alert('Section order saved successfully!');
+    } catch (error) {
+      console.error('Error saving section order:', error);
+      alert('Failed to save section order');
+    }
+  };
+
+  // Function to make API call for reordering
+  const reorderSections = async (storeId, sectionIds) => {
+    if (!sectionIds || sectionIds.length === 0) {
+      alert('No sections to reorder');
+      return;
+    }
+
+    const response = await fetch(`http://127.0.0.1:5000/api/stores/${storeId}/sections/reorder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sections: sectionIds
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save section order');
+    }
+  };
 
   // Update the fetchGroceryListForPlan function
   const fetchGroceryListForPlan = async (id) => {
@@ -165,7 +222,7 @@ function GroceryListView() {
   };
 
   const savePlan = async () => {
-    if (!planDetails.isTemporary || !location.state || !location.state.meals) {
+    if (!planDetails?.isTemporary || !location.state || !location.state.meals) {
       return; // Only save if this is a temporary plan
     }
 
@@ -202,12 +259,16 @@ function GroceryListView() {
     }
   };
 
+  // In GroceryListView.js around line 116-125, modify the handleCheckboxChange function:
   const handleCheckboxChange = (sectionIndex, itemIndex) => {
+    console.log(`Toggling checkbox for section ${sectionIndex}, item ${itemIndex}`);
+
     setGroceryList(prevList => {
-      const newList = [...prevList];
-      // Toggle the checked state if it exists, or set to true if it doesn't
+      const newList = JSON.parse(JSON.stringify(prevList)); // Deep copy to ensure state changes
       newList[sectionIndex].items[itemIndex].checked =
         !newList[sectionIndex].items[itemIndex].checked;
+
+      console.log(`New checked state: ${newList[sectionIndex].items[itemIndex].checked}`);
       return newList;
     });
   };
@@ -244,6 +305,13 @@ function GroceryListView() {
             Organize Sections
           </button>
 
+          {/* Add this new reorder button */}
+          <button
+            className={`reorder-btn ${isReordering ? 'active' : ''}`}
+            onClick={() => setIsReordering(!isReordering)}>
+            {isReordering ? 'Done Reordering' : 'Reorder Sections'}
+          </button>
+
           <button className="print-btn" onClick={printGroceryList}>
             Print List
           </button>
@@ -254,52 +322,98 @@ function GroceryListView() {
         </div>
       </div>
 
+      {/* Show save button when reordering */}
+      {isReordering && (
+        <div className="reordering-actions no-print">
+          <p>Drag sections to reorder them</p>
+          <button className="save-order-btn" onClick={saveNewSectionOrder}>
+            Save New Order
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="loading">Loading grocery list...</div>
       ) : error ? (
         <div className="error-message">{error}</div>
       ) : (
-        <div className="grocery-list-content">
-          {groceryList.length === 0 ? (
-            <div className="empty-list">
-              <p>No items found in your grocery list.</p>
-            </div>
-          ) : (
-            <div className="sections-container">
-              {groceryList.map((section, sectionIndex) => (
-                section.items && section.items.length > 0 ? (
-                  <div key={section.section} className="grocery-section">
-                    <h3 className="section-title">{section.section}</h3>
-                    <ul className="grocery-items">
-                      {section.items.map((item, itemIndex) => (
-                        <li
-                          key={`${section.section}-${itemIndex}`}
-                          className={`grocery-item ${item.checked ? 'checked' : ''}`}
-                        >
-                          <label className="checkbox-container">
-                            <input
-                              type="checkbox"
-                              className="item-checkbox no-print"
-                              checked={item.checked || false}
-                              onChange={() => handleCheckboxChange(sectionIndex, itemIndex)}
-                            />
-                            <span className="checkmark no-print"></span>
-                            <div className="item-details">
-                              <span className="item-name">{item.name}</span>
-                              <span className="item-quantity">
-                                {item.fraction_str || `${item.quantity} ${item.unit}`}
-                              </span>
-                            </div>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
+        isReordering ? (
+          <div className="sections-container reordering">
+            {groceryList.map((section, sectionIndex) => (
+              section.items && section.items.length > 0 ? (
+                <div key={section.section} className="grocery-section reorderable">
+                  <h3 className="section-title">{section.section}</h3>
+                  <div className="item-count">{section.items.length} items</div>
+                  <div className="reorder-buttons">
+                    <button
+                      className="move-up-btn"
+                      disabled={sectionIndex === 0}
+                      onClick={() => {
+                        const newList = [...groceryList];
+                        [newList[sectionIndex], newList[sectionIndex - 1]] =
+                          [newList[sectionIndex - 1], newList[sectionIndex]];
+                        setGroceryList(newList);
+                      }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className="move-down-btn"
+                      disabled={sectionIndex === groceryList.length - 1}
+                      onClick={() => {
+                        const newList = [...groceryList];
+                        [newList[sectionIndex], newList[sectionIndex + 1]] =
+                          [newList[sectionIndex + 1], newList[sectionIndex]];
+                        setGroceryList(newList);
+                      }}
+                    >
+                      ↓
+                    </button>
                   </div>
-                ) : null
-              ))}
-            </div>
-          )}
-        </div>
+                </div>
+              ) : null
+            ))}
+          </div>
+        ) : (
+          <div className="sections-container">
+            {groceryList.map((section, sectionIndex) => (
+              section.items && section.items.length > 0 ? (
+                <div key={section.section} className="grocery-section">
+                  <h3 className="section-title">{section.section}</h3>
+                  <ul className="grocery-items">
+                    {section.items.map((item, itemIndex) => (
+                      <li
+                        key={`${section.section}-${itemIndex}`}
+                        className={`grocery-item ${item.checked ? 'checked' : ''}`}
+                      >
+                        <label className="checkbox-container">
+                          <input
+                            type="checkbox"
+                            className="item-checkbox no-print"
+                            checked={item.checked || false}
+                            onChange={() => handleCheckboxChange(sectionIndex, itemIndex)}
+                          />
+                          <span className="checkmark no-print"></span>
+                          <div className="item-details">
+                            <span className="item-name">
+                              {item.name || item.main_text || ""}
+                            </span>
+                            <span className="item-quantity">
+                              {item.formatted_quantity || item.fraction_str ||
+                                (item.quantity !== undefined && item.unit ?
+                                  `${item.quantity} ${item.unit}` :
+                                  (item.precision_text || ""))}
+                            </span>
+                          </div>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null
+            ))}
+          </div>
+        )
       )}
     </div>
   );

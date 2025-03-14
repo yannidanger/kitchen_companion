@@ -1,0 +1,92 @@
+/* Ingredient mover component */
+.ingredient-mover {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .mover-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .selection-counter {
+    background-color: #2196F3;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  .mover-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
+  
+  .target-section-selector {
+    flex: 1;
+  }
+  
+  .mover-buttons {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .move-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .move-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .clear-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+  }
+  
+  .clear-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .mover-instructions {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #fffde7;
+    border-left: 4px solid #ffd600;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  /* Movement controls */
+  .movement-controls {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+  }
+  
+  .control-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
