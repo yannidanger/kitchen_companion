@@ -242,6 +242,13 @@ class Recipe(db.Model):
         back_populates="sub_recipe",
         cascade="all, delete-orphan"
     )
+    
+    meal_slots = db.relationship(
+    "MealSlot",
+    backref="recipe",
+    cascade="all, delete-orphan",
+    lazy=True
+)
 
     def to_dict(self, depth=1):
         """Convert recipe to dictionary, with control over sub-recipe expansion depth."""

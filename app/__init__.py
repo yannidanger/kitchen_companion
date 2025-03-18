@@ -38,10 +38,12 @@ def create_app():
     from app.routes import ingredient_routes
     app.register_blueprint(ingredient_routes)
     from app.routes import grocery_routes
-    app.register_blueprint(grocery_routes, url_prefix='/grocery')
+    app.register_blueprint(grocery_routes)
     from app.routes import sub_recipes_bp
     print("Registering sub_recipes_bp...")
     app.register_blueprint(sub_recipes_bp)
     print("sub_recipes_bp registered successfully.")
+    from app.routes.grocery import generate_grocery_bp
+    app.register_blueprint(generate_grocery_bp)
 
     return app

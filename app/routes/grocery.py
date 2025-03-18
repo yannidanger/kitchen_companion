@@ -1,11 +1,20 @@
 from flask import Blueprint, jsonify, request
 from app import db
-from app.models import WeeklyPlan, MealSlot, Recipe, IngredientSection, Section, Ingredient, Store
-from app.utils import get_recipe_ingredients, map_ingredients_to_sections, format_ingredient_for_display, deduplicate_sections
+from app.models import (
+    WeeklyPlan, MealSlot, Recipe, RecipeIngredient, 
+    Ingredient, Section, IngredientSection, Store
+)
+from app.utils.grocery_list_aggregation import aggregate_grocery_list, format_for_display
+from app.utils.utils import get_recipe_ingredients, format_ingredient_for_display, deduplicate_sections
 from .meal_planner import meal_planner_routes
 import logging
+from flask_cors import CORS
 
 grocery_routes = Blueprint('grocery_routes', __name__)
+CORS(grocery_routes)  # Enable CORS for this blueprint
+
+generate_grocery_bp = Blueprint('generate_grocery', __name__)
+CORS(generate_grocery_bp) 
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -280,3 +289,58 @@ def get_grocery_list_json():
         logger.error(traceback.format_exc())
         return jsonify({"error": "An error occurred while generating the grocery list"}), 500
 
+@generate_grocery_bp.route('/api/generate_grocery_list', methods=['POST', 'OPTIONS'])
+def generate_grocery_list():
+    """
+    Generate a grocery list from a list of meals without saving as a weekly plan
+    """
+    if request.method == 'OPTIONS':
+        # Handle preflight request
+        return '', 204
+        
+    try:
+        data = request.get_json()
+        meals = data.get('meals', [])
+        
+        if not meals:
+            return jsonify({"error": "No meals provided"}), 400
+        
+        # Logic similar to get_grocery_list but for temporary meals
+        all_ingredients = []
+        
+        for meal in meals:
+            recipe_id = meal.get('recipe_id')
+            if recipe_id:
+                ingredients = get_recipe_ingredients(recipe_id)
+                all_ingredients.extend(ingredients)
+        
+        # Use your existing consolidation and organization logic
+        ingredient_map = {}
+        for ingredient in all_ingredients:
+            key = (ingredient.get('item_name', '').lower(), ingredient.get('unit', ''))
+            if key not in ingredient_map:
+                ingredient_map[key] = ingredient.copy()
+            else:
+                # Add quantities
+                if 'quantity' in ingredient and 'quantity' in ingredient_map[key]:
+                    ingredient_map[key]['quantity'] += ingredient['quantity']
+        
+        consolidated_ingredients = list(ingredient_map.values())
+        
+        # Process ingredients for display
+        items = [format_ingredient_for_display(ingredient) for ingredient in consolidated_ingredients]
+        
+        # Group by default "Uncategorized" section
+        grocery_list = [{
+            'section': 'All Items',
+            'order': 1,
+            'items': items
+        }]
+        
+        return jsonify({"grocery_list": grocery_list})
+        
+    except Exception as e:
+        logger.error(f"Error generating grocery list: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({"error": "An error occurred while generating the grocery list"}), 500

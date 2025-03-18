@@ -452,3 +452,4 @@ def format_ingredient_for_display(ingredient):
         display_item['formatted_quantity'] = ""
         
     return display_item
+

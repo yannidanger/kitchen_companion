@@ -34,7 +34,7 @@ function GroceryListPreview() {
       setLoading(true);
 
       // Generate grocery list from meals array without saving the plan
-      const response = await fetch(`http://127.0.0.1:5000/api/generate_grocery_list`, {
+      const response = await fetch(`http://127.0.0.1:5000/api/grocery_list/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

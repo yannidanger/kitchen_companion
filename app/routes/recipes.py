@@ -191,16 +191,52 @@ def update_recipe(recipe_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-
 @recipes_routes.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
 def delete_recipe(recipe_id):
     try:
-        recipe = Recipe.query.get_or_404(recipe_id)
+        # Start a transaction
+        db.session.begin_nested()
+        
+        # First, check if recipe exists
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+            
+        # Find and delete related RecipeIngredient records
+        RecipeIngredient.query.filter_by(recipe_id=recipe_id).delete()
+        
+        # Find and delete recipe components (sub-recipes) that reference this recipe
+        RecipeComponent.query.filter_by(recipe_id=recipe_id).delete()
+        
+        # Also check for references to this recipe as a sub-recipe in other recipes
+        RecipeComponent.query.filter_by(sub_recipe_id=recipe_id).delete()
+        
+        # Check for MealSlot references (if they exist)
+        try:
+            from app.models import MealSlot
+            MealSlot.query.filter_by(recipe_id=recipe_id).delete()
+        except (ImportError, AttributeError):
+            # MealSlot might not exist or not be imported, which is fine
+            logger.debug("Could not find MealSlot model, skipping meal slot cleaning")
+            pass
+            
+        # Now we can safely delete the recipe
         db.session.delete(recipe)
+        
+        # Commit the transaction
         db.session.commit()
+        
+        logger.info(f"Recipe with ID {recipe_id} successfully deleted")
         return jsonify({'message': 'Recipe deleted successfully'}), 200
     except Exception as e:
+        # Roll back in case of an error
         db.session.rollback()
+        
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Error deleting recipe {recipe_id}: {str(e)}")
+        logger.error(error_details)
+        
         return jsonify({'error': str(e)}), 500
 
 @recipes_routes.route('/api/recipes/<int:recipe_id>/<int:sub_recipe_id>', methods=['DELETE'])
