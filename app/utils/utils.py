@@ -453,3 +453,37 @@ def format_ingredient_for_display(ingredient):
         
     return display_item
 
+def normalize_ingredient_keys(all_ingredients):
+    """
+    Normalize ingredients to consolidate similar items.
+    Returns a new list with normalized names and consolidated quantities.
+    """
+    from app.utils.ingredient_normalizer import normalize_ingredient_name, get_canonical_name
+    
+    # First pass: group by normalized names
+    normalized_map = {}
+    
+    for ingredient in all_ingredients:
+        item_name = ingredient.get('item_name', '')
+        if not item_name:
+            continue
+            
+        normalized_name = normalize_ingredient_name(item_name)
+        unit = ingredient.get('unit', '').lower().strip()
+        
+        # Create a key for grouping similar ingredients with the same unit
+        key = (normalized_name, unit)
+        
+        if key not in normalized_map:
+            # Create a new entry with the original or canonical name
+            normalized_map[key] = ingredient.copy()
+            # Use the canonical name if available
+            if ingredient.get('id'):
+                canonical_name = get_canonical_name(item_name, ingredient.get('id'))
+                normalized_map[key]['item_name'] = canonical_name
+        else:
+            # Add quantities for the same ingredient
+            if 'quantity' in ingredient and 'quantity' in normalized_map[key]:
+                normalized_map[key]['quantity'] += ingredient['quantity']
+    
+    return list(normalized_map.values())

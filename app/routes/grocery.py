@@ -5,7 +5,7 @@ from app.models import (
     Ingredient, Section, IngredientSection, Store
 )
 from app.utils.grocery_list_aggregation import aggregate_grocery_list, format_for_display
-from app.utils.utils import get_recipe_ingredients, format_ingredient_for_display, deduplicate_sections
+from app.utils.utils import get_recipe_ingredients, format_ingredient_for_display, deduplicate_sections, map_ingredients_to_sections
 from .meal_planner import meal_planner_routes
 import logging
 from flask_cors import CORS
@@ -301,23 +301,37 @@ def generate_grocery_list():
     try:
         data = request.get_json()
         meals = data.get('meals', [])
+        store_id = data.get('store_id')
         
         if not meals:
             return jsonify({"error": "No meals provided"}), 400
         
-        # Logic similar to get_grocery_list but for temporary meals
+        # Gather all ingredients
         all_ingredients = []
-        
         for meal in meals:
             recipe_id = meal.get('recipe_id')
             if recipe_id:
                 ingredients = get_recipe_ingredients(recipe_id)
                 all_ingredients.extend(ingredients)
         
-        # Use your existing consolidation and organization logic
+        logger.info(f"Retrieved {len(all_ingredients)} raw ingredients from all recipes")
+        
+        # Use our new normalization function
+        from app.utils.ingredient_normalizer import normalize_ingredient_name
+        
+        # Normalize and consolidate ingredients
         ingredient_map = {}
         for ingredient in all_ingredients:
-            key = (ingredient.get('item_name', '').lower(), ingredient.get('unit', ''))
+            # Skip if no item name
+            if not ingredient.get('item_name'):
+                continue
+                
+            # Create a normalized key
+            normalized_name = normalize_ingredient_name(ingredient.get('item_name', ''))
+            unit = ingredient.get('unit', '').lower().strip()
+            
+            key = (normalized_name, unit)
+            
             if key not in ingredient_map:
                 ingredient_map[key] = ingredient.copy()
             else:
@@ -326,17 +340,28 @@ def generate_grocery_list():
                     ingredient_map[key]['quantity'] += ingredient['quantity']
         
         consolidated_ingredients = list(ingredient_map.values())
+        logger.info(f"Consolidated to {len(consolidated_ingredients)} unique ingredients")
         
         # Process ingredients for display
         items = [format_ingredient_for_display(ingredient) for ingredient in consolidated_ingredients]
         
-        # Group by default "Uncategorized" section
-        grocery_list = [{
-            'section': 'All Items',
-            'order': 1,
-            'items': items
-        }]
+        # If store_id is provided, organize by sections
+        if store_id:
+            grocery_list = map_ingredients_to_sections(consolidated_ingredients, store_id)
+        else:
+            # Default uncategorized list
+            grocery_list = [{
+                'section': 'All Items',
+                'order': 1,
+                'items': items
+            }]
         
+        logger.info("Generated grocery list structure:")
+        for section in grocery_list:
+            logger.info(f"Section: {section['section']} with {len(section['items'])} items")
+            for item in section['items']:
+                logger.info(f"Item: {item}")  # Log the entire item
+
         return jsonify({"grocery_list": grocery_list})
         
     except Exception as e:

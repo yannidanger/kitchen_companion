@@ -29,12 +29,13 @@ function GroceryListPreview() {
     }
   }, [location.state]);
 
+  // In GroceryListPreview.js, update generateGroceryListFromMeals function
   const generateGroceryListFromMeals = async (meals) => {
     try {
       setLoading(true);
 
       // Generate grocery list from meals array without saving the plan
-      const response = await fetch(`http://127.0.0.1:5000/api/grocery_list/generate`, {
+      const response = await fetch(`http://127.0.0.1:5000/api/generate_grocery_list`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -228,9 +229,20 @@ function GroceryListPreview() {
                             />
                             <span className="checkmark no-print"></span>
                             <div className="item-details">
-                              <span className="item-name">{item.main_text}</span>
+                              {/* Add this console.log to debug what properties are available */}
+                              {console.log('Item data:', item)}
+
+                              <span className="item-name">
+                                {/* Try all possible properties that might contain the name */}
+                                {item.name || item.main_text || item.item_name ||
+                                  (typeof item === 'string' ? item : "Unnamed Item")}
+                              </span>
+
                               <span className="item-quantity">
-                                {item.fraction_str || item.precision_text}
+                                {item.formatted_quantity || item.fraction_str ||
+                                  (item.quantity !== undefined ?
+                                    (item.unit ? `${item.quantity} ${item.unit}` : item.quantity) :
+                                    (item.precision_text || ""))}
                               </span>
                             </div>
                           </label>

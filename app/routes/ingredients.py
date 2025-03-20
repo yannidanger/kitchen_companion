@@ -95,3 +95,46 @@ def populate_ingredients():
         logger.error(f"Error populating ingredients: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+@ingredient_routes.route('/api/ingredients', methods=['POST'])
+def add_ingredient():
+    """Add a new ingredient."""
+    try:
+        data = request.json
+        if not data or 'name' not in data:
+            return jsonify({"error": "Ingredient name is required"}), 400
+            
+        from app.utils.ingredient_normalizer import normalize_ingredient_name
+        
+        # Normalize the name
+        raw_name = data['name'].strip()
+        normalized_name = normalize_ingredient_name(raw_name)
+        
+        # Check if a similar ingredient exists
+        existing_ingredient = Ingredient.query.filter(
+            Ingredient.name.ilike(f"%{normalized_name}%")
+        ).first()
+        
+        if existing_ingredient:
+            # Return the existing ingredient
+            return jsonify({
+                "message": f"Similar ingredient already exists: '{existing_ingredient.name}'",
+                "ingredient": existing_ingredient.to_dict(),
+                "is_existing": True
+            })
+        
+        # Create new ingredient
+        new_ingredient = Ingredient(name=raw_name)
+        db.session.add(new_ingredient)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Ingredient added successfully",
+            "ingredient": new_ingredient.to_dict(),
+            "is_existing": False
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error adding ingredient: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

@@ -441,3 +441,14 @@
   margin-left: auto;
   margin-right: 10px;
 }
+
+/* Add these to your groceryListView.css file */
+.item-name {
+  font-weight: 500;
+  color: #333 !important; /* Force dark text color */
+}
+
+.item-quantity {
+  color: #666 !important; /* Force medium gray text color */
+  font-size: var(--font-size-sm);
+}

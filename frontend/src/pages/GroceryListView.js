@@ -38,15 +38,15 @@ function GroceryListView() {
         // Fetch store if not already selected
         const storesResponse = await fetch('http://127.0.0.1:5000/api/stores');
         const storesData = await storesResponse.json();
-  
+
         if (storesData.length === 0) {
           alert('No stores available to save section order');
           return;
         }
-  
+
         const defaultStore = storesData.find(store => store.is_default) || storesData[0];
         setSelectedStore(defaultStore.id);
-  
+
         // Pass the reordered section IDs
         const sectionIds = groceryList
           .filter(section => section.sectionId) // Only include sections with IDs
@@ -58,7 +58,7 @@ function GroceryListView() {
           .map(section => section.sectionId);
         await reorderSections(selectedStore, sectionIds);
       }
-  
+
       setIsReordering(false);
       alert('Section order saved successfully!');
     } catch (error) {
@@ -404,6 +404,11 @@ function GroceryListView() {
                                   `${item.quantity} ${item.unit}` :
                                   (item.precision_text || ""))}
                             </span>
+                            {item.source && (
+                              <span className="item-source">
+                                from {item.source}
+                              </span>
+                            )}
                           </div>
                         </label>
                       </li>

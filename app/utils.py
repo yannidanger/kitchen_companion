@@ -196,13 +196,13 @@ def render_grocery_list(aggregated_ingredients):
 
     return "\n".join(rendered_list)
 
-def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
+def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None, depth=0, max_depth=5):
     """Recursively get all ingredients for a recipe, including from sub-recipes."""
     if visited is None:
         visited = set()
     
     # Prevent circular references
-    if recipe_id in visited:
+    if recipe_id in visited or depth > max_depth:
         return []
     
     visited.add(recipe_id)
@@ -219,18 +219,23 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
             continue
             
         if ingredient.ingredient:  # Regular ingredient
+            # Use normalized name from our utility
+            from app.utils.ingredient_normalizer import get_canonical_name
+            
+            # Get canonical or normalized name
+            normalized_name = get_canonical_name(ingredient.ingredient.name, ingredient.ingredient.id)
+            
             quantity_info = {
                 'quantity': (ingredient.quantity or 0) * quantity_multiplier,
                 'is_fraction': ingredient.is_fraction
             }
-        
+            
             # Handle fractions
+            precision_text = ""
             if ingredient.is_fraction and ingredient.quantity_numerator is not None and ingredient.quantity_denominator is not None:
                 # Scale the fraction by the multiplier
                 numerator = int(ingredient.quantity_numerator * quantity_multiplier)
                 denominator = ingredient.quantity_denominator
-                quantity_info['quantity_numerator'] = numerator
-                quantity_info['quantity_denominator'] = denominator
                 
                 # Generate a display string for the fraction
                 if numerator >= denominator:
@@ -247,29 +252,45 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
             else:
                 # Handle regular decimal quantities
                 precision_text = f"({(ingredient.quantity or 0) * quantity_multiplier} {ingredient.unit or ''})"
-                
+            
+            # Store both the original and the normalized names
             result.append({
                 "id": ingredient.ingredient.id,
-                "item_name": ingredient.ingredient.name,
+                "item_name": normalized_name,  # Use normalized name for consistency
+                "original_name": ingredient.ingredient.name,  # Keep original for reference
                 "quantity": (ingredient.quantity or 0) * quantity_multiplier,
                 "unit": ingredient.unit or "",
-                "main_text": ingredient.ingredient.name,
+                "main_text": normalized_name,  # Use normalized for display
                 "precision_text": precision_text,
                 "is_fraction": ingredient.is_fraction,
                 "quantity_numerator": ingredient.quantity_numerator,
                 "quantity_denominator": ingredient.quantity_denominator
             })
     
-    # Add ingredients from sub-recipes
+    # Add ingredients from sub-recipes with improved tracking
     for component in recipe.components:
         if component.sub_recipe_id:
             sub_quantity = component.quantity or 1.0
-            sub_ingredients = get_recipe_ingredients(
-                component.sub_recipe_id, 
-                quantity_multiplier * sub_quantity,
-                visited.copy()
-            )
-            result.extend(sub_ingredients)
+            sub_recipe = Recipe.query.get(component.sub_recipe_id)
+            
+            if sub_recipe:
+                logger.info(f"Processing sub-recipe: {sub_recipe.name} (depth: {depth+1})")
+                
+                # Get ingredients from sub-recipe
+                sub_ingredients = get_recipe_ingredients(
+                    component.sub_recipe_id, 
+                    quantity_multiplier * sub_quantity,
+                    visited.copy(),
+                    depth + 1,
+                    max_depth
+                )
+                
+                # Add sub-recipe information to each ingredient
+                for sub_ingredient in sub_ingredients:
+                    sub_ingredient['from_recipe'] = sub_recipe.name
+                    sub_ingredient['from_recipe_id'] = sub_recipe.id
+                
+                result.extend(sub_ingredients)
     
     return result
 
@@ -413,13 +434,25 @@ def map_ingredients_to_sections(ingredients, store_id=None):
 
 def format_ingredient_for_display(ingredient):
     """Format an ingredient dictionary for display in the grocery list."""
+    # Debug what's coming in
+    logger.debug(f"Formatting ingredient: {ingredient}")
+    
     display_item = {
         'id': ingredient.get('id'),
-        'name': ingredient.get('item_name'),
+        'name': ingredient.get('item_name', ingredient.get('main_text', 'Unnamed Item')),
         'quantity': ingredient.get('quantity'),
         'unit': ingredient.get('unit', ''),
-        'is_fraction': ingredient.get('is_fraction', False)
+        'is_fraction': ingredient.get('is_fraction', False),
+        'precision_text': ingredient.get('precision_text', '')
     }
+    
+    # Make sure we always have a name
+    if not display_item['name'] or display_item['name'].strip() == '':
+        display_item['name'] = 'Unnamed Item'
+
+    # Add source recipe information if available
+    if ingredient.get('from_recipe'):
+        display_item['source'] = ingredient.get('from_recipe')
     
     # Add fraction string if available
     if ingredient.get('is_fraction') and ingredient.get('quantity_numerator') and ingredient.get('quantity_denominator'):
@@ -436,15 +469,23 @@ def format_ingredient_for_display(ingredient):
         else:
             display_item['fraction_str'] = f"{numerator}/{denominator}"
     
+    # If precision_text isn't provided, generate one
+    if not display_item.get('precision_text'):
+        if display_item.get('fraction_str') and display_item.get('unit'):
+            display_item['precision_text'] = f"({display_item['fraction_str']} {display_item['unit']})"
+        elif display_item.get('quantity') is not None:
+            quantity_str = str(display_item['quantity']).rstrip('0').rstrip('.') if '.' in str(display_item['quantity']) else str(display_item['quantity'])
+            display_item['precision_text'] = f"({quantity_str} {display_item.get('unit', '')})"
+    
     # Create a formatted_quantity field that combines quantity and unit
     if display_item.get('fraction_str') and display_item.get('unit'):
-        display_item['formatted_quantity'] = f"{display_item['fraction_str']} {display_item['unit']}"
+        display_item['formatted_quantity'] = f"{display_item['fraction_str']} {display_item['unit']}".strip()
     elif display_item.get('fraction_str'):
         display_item['formatted_quantity'] = display_item['fraction_str']
     elif display_item.get('quantity') is not None and display_item.get('unit'):
         # Format the decimal nicely (remove trailing zeros)
         quantity_str = str(display_item['quantity']).rstrip('0').rstrip('.') if '.' in str(display_item['quantity']) else str(display_item['quantity'])
-        display_item['formatted_quantity'] = f"{quantity_str} {display_item['unit']}"
+        display_item['formatted_quantity'] = f"{quantity_str} {display_item['unit']}".strip()
     elif display_item.get('quantity') is not None:
         quantity_str = str(display_item['quantity']).rstrip('0').rstrip('.') if '.' in str(display_item['quantity']) else str(display_item['quantity'])
         display_item['formatted_quantity'] = quantity_str
