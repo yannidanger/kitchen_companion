@@ -1,13 +1,19 @@
 from app import db
 from datetime import datetime
 
+# Add to your models.py file
 class Ingredient(db.Model):
     __tablename__ = 'ingredient'
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    # New fields
+    usda_fdc_id = db.Column(db.String(50), nullable=True)
+    is_custom = db.Column(db.Boolean, default=True)
+    display_name = db.Column(db.String(255), nullable=True)
+    category = db.Column(db.String(100), nullable=True)
 
-    # ADD THIS RELATIONSHIP HERE:
+    # Existing relationship
     ingredient_recipes = db.relationship(
         "RecipeIngredient",
         back_populates="ingredient",
@@ -15,7 +21,14 @@ class Ingredient(db.Model):
     )
 
     def to_dict(self):
-        return {'id': self.id, 'name': self.name}
+        return {
+            'id': self.id, 
+            'name': self.name,
+            'usda_fdc_id': self.usda_fdc_id,
+            'is_custom': self.is_custom,
+            'display_name': self.display_name or self.name,
+            'category': self.category
+        }
 
     
 class Food(db.Model):

@@ -15,14 +15,16 @@ def get_recipe(recipe_id):
         'ingredients': [ri.to_dict() for ri in recipe.ingredients]
     })
 
-# In routes.py
-# Update the add_recipe function
+# This updated version corrects ingredient spelling when adding recipes
 
 @recipes_routes.route('/api/recipes', methods=['POST'])
 def add_recipe():
     data = request.get_json()
     logger.debug(f"Recipe data received: {data}")
 
+    # Import ingredient normalizer
+    from app.utils.ingredient_normalizer import normalize_ingredient_name, correct_spelling
+    
     # Create or update recipe
     recipe = Recipe.query.get(data.get('id')) if data.get('id') else Recipe()
     recipe.name = data['name']
@@ -56,7 +58,17 @@ def add_recipe():
         else:
             # Regular ingredient
             ingredient_name = ingredient_data['item_name']
-            ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+            
+            # Correct the spelling of ingredient name
+            corrected_name = correct_spelling(ingredient_name.lower())
+            
+            # If a correction was made, use the corrected name
+            if corrected_name != ingredient_name.lower():
+                logger.info(f"Corrected '{ingredient_name}' to '{corrected_name}'")
+                ingredient_name = corrected_name
+            
+            # Find or create the ingredient with the corrected name
+            ingredient = Ingredient.query.filter(Ingredient.name.ilike(ingredient_name)).first()
             if not ingredient:
                 ingredient = Ingredient(name=ingredient_name)
                 db.session.add(ingredient)
@@ -83,6 +95,8 @@ def add_recipe():
     db.session.commit()
 
     return jsonify(recipe.to_dict()), 201
+
+# This updated version corrects ingredient spelling when updating recipes
 
 @recipes_routes.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
 def update_recipe(recipe_id):
@@ -127,14 +141,25 @@ def update_recipe(recipe_id):
         RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
         RecipeComponent.query.filter_by(recipe_id=recipe.id).delete()
         
+        # Import ingredient normalizer
+        from app.utils.ingredient_normalizer import correct_spelling
+        
         # Re-add regular ingredients
         for ingredient_data in regular_ingredients:
             ingredient_name = ingredient_data.get('item_name')
             if not ingredient_name:
                 continue  # Skip ingredients without a name
-                
-            # Find or create the ingredient
-            ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+            
+            # Correct the spelling of ingredient name
+            corrected_name = correct_spelling(ingredient_name.lower())
+            
+            # If a correction was made, use the corrected name
+            if corrected_name != ingredient_name.lower():
+                logger.info(f"Corrected '{ingredient_name}' to '{corrected_name}'")
+                ingredient_name = corrected_name
+            
+            # Find or create the ingredient with the corrected name
+            ingredient = Ingredient.query.filter(Ingredient.name.ilike(ingredient_name)).first()
             if not ingredient:
                 ingredient = Ingredient(name=ingredient_name)
                 db.session.add(ingredient)

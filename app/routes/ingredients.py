@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
 from app import db
 from app.models import Ingredient, IngredientSection, Section, RecipeIngredient
+from app.utils.usda_api import search_foods, get_food_details, simplify_food_data
+from app.utils.ingredient_normalizer import normalize_ingredient_name
 from app.utils import logger
 
 
@@ -96,6 +98,8 @@ def populate_ingredients():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+# This updated version should replace the existing add_ingredient function in app/routes/ingredients.py
+
 @ingredient_routes.route('/api/ingredients', methods=['POST'])
 def add_ingredient():
     """Add a new ingredient."""
@@ -104,24 +108,24 @@ def add_ingredient():
         if not data or 'name' not in data:
             return jsonify({"error": "Ingredient name is required"}), 400
             
-        from app.utils.ingredient_normalizer import normalize_ingredient_name
+        from app.utils.ingredient_normalizer import normalize_ingredient_name, are_ingredients_similar
         
         # Normalize the name
         raw_name = data['name'].strip()
         normalized_name = normalize_ingredient_name(raw_name)
         
-        # Check if a similar ingredient exists
-        existing_ingredient = Ingredient.query.filter(
-            Ingredient.name.ilike(f"%{normalized_name}%")
-        ).first()
+        # Check if a similar ingredient exists by checking all existing ingredients
+        existing_ingredients = Ingredient.query.all()
         
-        if existing_ingredient:
-            # Return the existing ingredient
-            return jsonify({
-                "message": f"Similar ingredient already exists: '{existing_ingredient.name}'",
-                "ingredient": existing_ingredient.to_dict(),
-                "is_existing": True
-            })
+        for existing in existing_ingredients:
+            existing_normalized = normalize_ingredient_name(existing.name)
+            if are_ingredients_similar(normalized_name, existing_normalized):
+                # Return the existing ingredient
+                return jsonify({
+                    "message": f"Similar ingredient already exists: '{existing.name}'",
+                    "ingredient": existing.to_dict(),
+                    "is_existing": True
+                })
         
         # Create new ingredient
         new_ingredient = Ingredient(name=raw_name)

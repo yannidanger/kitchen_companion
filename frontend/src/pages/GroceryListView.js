@@ -13,6 +13,7 @@ function GroceryListView() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
+  const [detailedView, setDetailedView] = useState(false);
 
   useEffect(() => {
     if (planId) {
@@ -259,16 +260,30 @@ function GroceryListView() {
     }
   };
 
-  // In GroceryListView.js around line 116-125, modify the handleCheckboxChange function:
-  const handleCheckboxChange = (sectionIndex, itemIndex) => {
-    console.log(`Toggling checkbox for section ${sectionIndex}, item ${itemIndex}`);
+  // Fixed handleCheckboxChange function to work with grouped items
+  const handleCheckboxChange = (sectionIndex, groupKey) => {
+    console.log(`Toggling checkbox for section ${sectionIndex}, group ${groupKey}`);
 
     setGroceryList(prevList => {
-      const newList = JSON.parse(JSON.stringify(prevList)); // Deep copy to ensure state changes
-      newList[sectionIndex].items[itemIndex].checked =
-        !newList[sectionIndex].items[itemIndex].checked;
-
-      console.log(`New checked state: ${newList[sectionIndex].items[itemIndex].checked}`);
+      const newList = JSON.parse(JSON.stringify(prevList)); // Deep copy
+      const section = newList[sectionIndex];
+      
+      // Find all items in this section that match the groupKey
+      const groupItems = section.items.filter(item => 
+        (item.normalized_name || item.name.toLowerCase()) === groupKey
+      );
+      
+      // Determine the new checked state (toggle based on current state)
+      const currentCheckedState = groupItems.length > 0 && groupItems[0].checked;
+      const newCheckedState = !currentCheckedState;
+      
+      // Update all matching items
+      section.items.forEach(item => {
+        if ((item.normalized_name || item.name.toLowerCase()) === groupKey) {
+          item.checked = newCheckedState;
+        }
+      });
+      
       return newList;
     });
   };
@@ -319,6 +334,14 @@ function GroceryListView() {
           <button className="export-btn" onClick={exportGroceryListToCSV}>
             Export to CSV
           </button>
+
+          <button
+            className={`detail-toggle-btn ${detailedView ? 'active' : ''}`}
+            onClick={() => setDetailedView(!detailedView)}
+          >
+            {detailedView ? 'Simple View' : 'Detailed View'}
+          </button>
+
         </div>
       </div>
 
@@ -381,38 +404,98 @@ function GroceryListView() {
                 <div key={section.section} className="grocery-section">
                   <h3 className="section-title">{section.section}</h3>
                   <ul className="grocery-items">
-                    {section.items.map((item, itemIndex) => (
-                      <li
-                        key={`${section.section}-${itemIndex}`}
-                        className={`grocery-item ${item.checked ? 'checked' : ''}`}
-                      >
-                        <label className="checkbox-container">
-                          <input
-                            type="checkbox"
-                            className="item-checkbox no-print"
-                            checked={item.checked || false}
-                            onChange={() => handleCheckboxChange(sectionIndex, itemIndex)}
-                          />
-                          <span className="checkmark no-print"></span>
-                          <div className="item-details">
-                            <span className="item-name">
-                              {item.name || item.main_text || ""}
-                            </span>
-                            <span className="item-quantity">
-                              {item.formatted_quantity || item.fraction_str ||
-                                (item.quantity !== undefined && item.unit ?
-                                  `${item.quantity} ${item.unit}` :
-                                  (item.precision_text || ""))}
-                            </span>
-                            {item.source && (
-                              <span className="item-source">
-                                from {item.source}
+                    {/* Group items by normalized name for display */}
+                    {(() => {
+                      // Group items by normalized name
+                      const groupedItems = {};
+                      
+                      section.items.forEach(item => {
+                        const key = item.normalized_name || item.name.toLowerCase();
+                        
+                        if (!groupedItems[key]) {
+                          // Initialize the group with the first item
+                          groupedItems[key] = {
+                            name: item.name,
+                            normalized_name: key,
+                            checked: item.checked || false,
+                            quantities: item.quantities || [],
+                            unit: item.unit || '',
+                            combined_quantity: item.combined_quantity || 0,
+                            formatted_combined: item.formatted_combined || '',
+                            has_multiple_units: item.has_multiple_units || false
+                          };
+                        } else {
+                          // Update checked state (if any item is checked, the group is checked)
+                          if (item.checked) {
+                            groupedItems[key].checked = true;
+                          }
+                          
+                          // Ensure quantities array exists and is populated
+                          if (item.quantities && item.quantities.length) {
+                            if (!groupedItems[key].quantities) {
+                              groupedItems[key].quantities = [];
+                            }
+                            // Only add quantities that aren't already in the group
+                            item.quantities.forEach(qty => {
+                              if (!groupedItems[key].quantities.some(
+                                existingQty => existingQty.recipe_id === qty.recipe_id && 
+                                              existingQty.quantity_text === qty.quantity_text)) {
+                                groupedItems[key].quantities.push(qty);
+                              }
+                            });
+                          }
+                        }
+                      });
+
+                      // Render the grouped items
+                      return Object.entries(groupedItems).map(([key, group], groupIndex) => (
+                        <li
+                          key={`${section.section}-${key}-${groupIndex}`}
+                          className={`grocery-item ${group.checked ? 'checked' : ''}`}
+                        >
+                          <label className="checkbox-container">
+                            <input
+                              type="checkbox"
+                              className="item-checkbox no-print"
+                              checked={group.checked || false}
+                              onChange={() => handleCheckboxChange(sectionIndex, key)}
+                            />
+                            <span className="checkmark no-print"></span>
+                            <div className="item-details">
+                              <span className="item-name">
+                                {group.name || "Unnamed Item"}
                               </span>
-                            )}
-                          </div>
-                        </label>
-                      </li>
-                    ))}
+
+                              {detailedView ? (
+                                // Detailed view: show all quantities with their sources
+                                <div className="item-quantities">
+                                  {group.quantities && group.quantities.length > 0 ? (
+                                    group.quantities.map((qty, qIndex) => (
+                                      <div key={qIndex} className="quantity-entry">
+                                        <span className="quantity-value">{qty.quantity_text}</span>
+                                        {qty.source && (
+                                          <span className="quantity-source">from {qty.source}</span>
+                                        )}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    // Fallback if quantities array is missing or empty
+                                    <span className="item-quantity">
+                                      {group.formatted_combined || 
+                                       (group.combined_quantity && group.unit ? 
+                                        `${group.combined_quantity} ${group.unit}` : "")}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                // Simple view: don't show any quantities
+                                <span className="item-quantity"></span>
+                              )}
+                            </div>
+                          </label>
+                        </li>
+                      ));
+                    })()}
                   </ul>
                 </div>
               ) : null
