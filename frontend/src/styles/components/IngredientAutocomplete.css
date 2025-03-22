@@ -1,0 +1,119 @@
+/* src/components/IngredientAutocomplete.css */
+.ingredient-autocomplete {
+    position: relative;
+    width: 100%;
+    font-family: inherit;
+  }
+  
+  .autocomplete-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .autocomplete-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.2s;
+  }
+  
+  .autocomplete-input:focus {
+    outline: none;
+    border-color: #6b8afd;
+    box-shadow: 0 0 0 2px rgba(107, 138, 253, 0.2);
+  }
+  
+  .autocomplete-loading {
+    position: absolute;
+    right: 12px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top: 2px solid #6b8afd;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    margin: 4px 0 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  .autocomplete-result {
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+  }
+  
+  .autocomplete-result:last-child {
+    border-bottom: none;
+  }
+  
+  .autocomplete-result:hover,
+  .autocomplete-result.selected {
+    background-color: #f5f8ff;
+  }
+  
+  .result-name {
+    font-weight: 500;
+    flex: 1;
+  }
+  
+  .result-category {
+    color: #666;
+    font-size: 12px;
+    margin-right: 8px;
+  }
+  
+  .result-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  
+  .usda-item .result-badge {
+    background-color: #e2f7e6;
+    color: #2a8d46;
+  }
+  
+  .custom-item .result-badge {
+    background-color: #f0f0f0;
+    color: #666;
+  }
+  
+  .no-results {
+    padding: 12px;
+    text-align: center;
+    color: #666;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    margin-top: 4px;
+  }

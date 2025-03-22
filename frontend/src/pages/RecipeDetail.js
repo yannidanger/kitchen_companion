@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import IngredientAutocomplete from "../components/IngredientAutocomplete";
 
 function RecipeDetail() {
   const { recipeId } = useParams();
@@ -92,9 +93,6 @@ function RecipeDetail() {
     };
 
     // Fetch the recipe details
-    // In RecipeDetail.js
-    // Update the fetchRecipe function in the useEffect hook to use fraction_str
-
     const fetchRecipe = async () => {
       try {
         const response = await fetch(`http://127.0.0.1:5000/api/recipes/${recipeId}`);
@@ -200,6 +198,22 @@ function RecipeDetail() {
     }));
   };
 
+  // Handle select from USDA autocomplete
+  const handleIngredientSelect = (index, selectedIngredient) => {
+    setForm((prevForm) => {
+      const updatedIngredients = [...prevForm.ingredients];
+      updatedIngredients[index] = {
+        ...updatedIngredients[index],
+        item_name: selectedIngredient.name,
+        display_name: selectedIngredient.display_name || selectedIngredient.name,
+        ingredient_id: selectedIngredient.id,
+        usda_fdc_id: selectedIngredient.isUsda ? selectedIngredient.id : null,
+        is_custom: !selectedIngredient.isUsda
+      };
+      return { ...prevForm, ingredients: updatedIngredients };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -218,7 +232,7 @@ function RecipeDetail() {
       form.ingredients.forEach(ingredient => {
         // Only add if it has a name
         if (ingredient.item_name || (ingredient.ingredient && ingredient.ingredient.name)) {
-          payload.ingredients.push({
+          const ingredientPayload = {
             id: ingredient.id,
             item_name: ingredient.item_name || (ingredient.ingredient ? ingredient.ingredient.name : ""),
             quantity: ingredient.quantity,
@@ -226,7 +240,17 @@ function RecipeDetail() {
             size: ingredient.size || "",
             descriptor: ingredient.descriptor || "",
             additional_descriptor: ingredient.additional_descriptor || ""
-          });
+          };
+          
+          // Add USDA data if available
+          if (ingredient.usda_fdc_id) {
+            ingredientPayload.usda_fdc_id = ingredient.usda_fdc_id;
+          }
+          if (ingredient.ingredient_id) {
+            ingredientPayload.ingredient_id = ingredient.ingredient_id;
+          }
+          
+          payload.ingredients.push(ingredientPayload);
         }
       });
 
@@ -386,14 +410,16 @@ function RecipeDetail() {
                       value={ingredient.descriptor || ""}
                       onChange={(e) => handleIngredientChange(index, "descriptor", e.target.value)}
                     />
-                    <input
-                      className="name-field"
-                      type="text"
-                      placeholder="Ingredient Name"
+                    
+                    {/* Replace standard input with IngredientAutocomplete */}
+                    <IngredientAutocomplete
                       value={ingredient.item_name || (ingredient.ingredient ? ingredient.ingredient.name : "")}
-                      onChange={(e) => handleIngredientChange(index, "item_name", e.target.value)}
+                      onChange={(value) => handleIngredientChange(index, "item_name", value)}
+                      onSelect={(selectedIngredient) => handleIngredientSelect(index, selectedIngredient)}
+                      placeholder="Ingredient Name"
                       required
                     />
+                    
                     <input
                       className="descriptor-field"
                       type="text"

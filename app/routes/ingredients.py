@@ -5,40 +5,120 @@ from app.utils.usda_api import search_foods, get_food_details, simplify_food_dat
 from app.utils.ingredient_normalizer import normalize_ingredient_name
 from app.utils import logger
 
-
 ingredient_routes = Blueprint('ingredient_routes', __name__)
 
 @ingredient_routes.route('/api/ingredients', methods=['GET'])
 def get_ingredients():
-    """Get all ingredients."""
+    """Get all ingredients, optionally with search query"""
     try:
-        # Add a filter parameter to exclude sub-recipes
-        exclude_subrec = request.args.get('exclude_subrec', 'false').lower() == 'true'
+        query = request.args.get('query', '').lower()
         
-        ingredients = Ingredient.query.all()
-        ingredients_list = []
+        if query:
+            # Search with case-insensitive partial match
+            ingredients = Ingredient.query.filter(
+                Ingredient.name.ilike(f"%{query}%")
+            ).order_by(Ingredient.name).all()
+            
+            # Also try to search in display_name if available
+            display_name_results = Ingredient.query.filter(
+                Ingredient.display_name.ilike(f"%{query}%")
+            ).all()
+            
+            # Combine results, ensuring no duplicates
+            ingredient_ids = {i.id for i in ingredients}
+            for item in display_name_results:
+                if item.id not in ingredient_ids:
+                    ingredients.append(item)
+                    ingredient_ids.add(item.id)
+            
+            # Sort results
+            ingredients.sort(key=lambda x: x.name)
+        else:
+            # Return all ingredients if no query
+            ingredients = Ingredient.query.order_by(Ingredient.name).all()
         
-        for ingredient in ingredients:
-            # Skip if it's a sub-recipe
-            if exclude_subrec:
-                # Check if this ingredient is used as a sub-recipe in any RecipeIngredient
-                is_subrecipe = db.session.query(RecipeIngredient).filter(
-                    RecipeIngredient.sub_recipe_id.isnot(None),
-                    RecipeIngredient.ingredient_id == ingredient.id
-                ).first() is not None
-                
-                if is_subrecipe:
-                    continue
-                    
-            # Skip empty names
-            if not ingredient.name:
-                continue
-                
-            ingredients_list.append(ingredient.to_dict())
-        
-        return jsonify(ingredients_list)
+        return jsonify([ingredient.to_dict() for ingredient in ingredients])
     except Exception as e:
         logger.error(f"Error getting ingredients: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@ingredient_routes.route('/api/ingredients/<int:ingredient_id>', methods=['GET'])
+def get_ingredient(ingredient_id):
+    """Get a specific ingredient by ID"""
+    try:
+        ingredient = Ingredient.query.get_or_404(ingredient_id)
+        return jsonify(ingredient.to_dict())
+    except Exception as e:
+        logger.error(f"Error getting ingredient: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@ingredient_routes.route('/api/ingredients/sections', methods=['GET'])
+def get_ingredient_sections():
+    """Get ingredient-section mappings for a store"""
+    try:
+        store_id = request.args.get('store_id')
+        if not store_id:
+            return jsonify({"error": "Store ID is required"}), 400
+            
+        # Get all sections for this store
+        sections = Section.query.filter_by(store_id=store_id).all()
+        section_ids = [section.id for section in sections]
+        
+        # Get all ingredient-section mappings for these sections
+        mappings = IngredientSection.query.filter(
+            IngredientSection.section_id.in_(section_ids)
+        ).all()
+        
+        return jsonify([
+            {
+                "ingredient_id": mapping.ingredient_id,
+                "section_id": mapping.section_id,
+                "order": mapping.order
+            }
+            for mapping in mappings
+        ])
+    except Exception as e:
+        logger.error(f"Error getting ingredient sections: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@ingredient_routes.route('/api/ingredients', methods=['POST'])
+def create_ingredient():
+    """Create a new ingredient"""
+    try:
+        data = request.json
+        if not data or 'name' not in data:
+            return jsonify({"error": "Ingredient name is required"}), 400
+            
+        # Normalize the ingredient name
+        normalized_name = normalize_ingredient_name(data['name'])
+        
+        # Check if a similar ingredient already exists
+        existing = Ingredient.query.filter_by(name=normalized_name).first()
+        if existing:
+            return jsonify({
+                "message": "Similar ingredient already exists", 
+                "ingredient": existing.to_dict()
+            }), 200
+        
+        # Create new ingredient
+        new_ingredient = Ingredient(
+            name=normalized_name,
+            display_name=data.get('display_name', data['name']),
+            is_custom=data.get('is_custom', True),
+            usda_fdc_id=data.get('usda_fdc_id'),
+            category=data.get('category')
+        )
+        
+        db.session.add(new_ingredient)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Ingredient created successfully",
+            "ingredient": new_ingredient.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating ingredient: {e}")
         return jsonify({"error": str(e)}), 500
     
 @ingredient_routes.route('/api/ingredients/<int:ingredient_id>/assign_section', methods=['POST'])

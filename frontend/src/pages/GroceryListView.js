@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 
 function GroceryListView() {
@@ -14,7 +14,108 @@ function GroceryListView() {
   const [isReordering, setIsReordering] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
   const [detailedView, setDetailedView] = useState(false);
+  const [useUsda, setUseUsda] = useState(true); // New state for USDA integration toggle
 
+  // Define fetch functions with useCallback to avoid dependency issues
+  const fetchGroceryListForPlan = useCallback(async (id) => {
+    try {
+      setLoading(true);
+
+      // First, fetch plan details
+      const planResponse = await fetch(`http://127.0.0.1:5000/api/weekly_plan/${id}`);
+      if (!planResponse.ok) {
+        throw new Error("Failed to fetch plan details");
+      }
+
+      const planData = await planResponse.json();
+      setPlanDetails({
+        ...planData,
+        isTemporary: false
+      });
+
+      // Then fetch grocery list with USDA option
+      const groceryResponse = await fetch(`http://127.0.0.1:5000/api/grocery_list?weekly_plan_id=${id}&use_usda=${useUsda}`);
+      if (!groceryResponse.ok) {
+        throw new Error("Failed to fetch grocery list");
+      }
+
+      const groceryData = await groceryResponse.json();
+
+      // Sort the grocery list by section order if available
+      const sortedList = groceryData.grocery_list.sort((a, b) => {
+        // Put Uncategorized at the end
+        if (a.section === "Uncategorized") return 1;
+        if (b.section === "Uncategorized") return -1;
+
+        // Sort by order if available
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+
+        // Fall back to alphabetical order
+        return a.section.localeCompare(b.section);
+      });
+
+      setGroceryList(sortedList || []);
+      console.log("Grocery list data:", sortedList);
+      setLoading(false);
+
+    } catch (err) {
+      console.error("Error fetching grocery list:", err);
+      setError(err.message);
+      setLoading(false);
+    }
+  }, [useUsda]);
+
+  // Update the generateGroceryListFromMeals function similarly
+  const generateGroceryListFromMeals = useCallback(async (meals) => {
+    try {
+      setLoading(true);
+
+      // Generate grocery list from meals array without saving the plan
+      const response = await fetch(`http://127.0.0.1:5000/api/generate_grocery_list`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          meals: meals,
+          use_usda: useUsda // Add USDA flag
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate grocery list");
+      }
+
+      const data = await response.json();
+
+      // Sort the grocery list by section order if available
+      const sortedList = data.grocery_list.sort((a, b) => {
+        // Put Uncategorized at the end
+        if (a.section === "Uncategorized") return 1;
+        if (b.section === "Uncategorized") return -1;
+
+        // Sort by order if available
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+
+        // Fall back to alphabetical order
+        return a.section.localeCompare(b.section);
+      });
+
+      setGroceryList(sortedList || []);
+      setLoading(false);
+
+    } catch (err) {
+      console.error("Error generating grocery list:", err);
+      setError(err.message);
+      setLoading(false);
+    }
+  }, [useUsda]);
+
+  // Initial load effect
   useEffect(() => {
     if (planId) {
       // If planId is provided, fetch the grocery list for this saved plan
@@ -31,7 +132,16 @@ function GroceryListView() {
       setError("No meal plan data found.");
       setLoading(false);
     }
-  }, [planId, location.state]);
+  }, [planId, location.state, fetchGroceryListForPlan, generateGroceryListFromMeals]);
+
+  // Refetch when USDA mode changes
+  useEffect(() => {
+    if (planId) {
+      fetchGroceryListForPlan(planId);
+    } else if (location.state && location.state.meals) {
+      generateGroceryListFromMeals(location.state.meals);
+    }
+  }, [useUsda, planId, location.state, fetchGroceryListForPlan, generateGroceryListFromMeals]);
 
   const saveNewSectionOrder = async () => {
     try {
@@ -90,104 +200,6 @@ function GroceryListView() {
     }
   };
 
-  // Update the fetchGroceryListForPlan function
-  const fetchGroceryListForPlan = async (id) => {
-    try {
-      setLoading(true);
-
-      // First, fetch plan details
-      const planResponse = await fetch(`http://127.0.0.1:5000/api/weekly_plan/${id}`);
-      if (!planResponse.ok) {
-        throw new Error("Failed to fetch plan details");
-      }
-
-      const planData = await planResponse.json();
-      setPlanDetails({
-        ...planData,
-        isTemporary: false
-      });
-
-      // Then fetch grocery list
-      const groceryResponse = await fetch(`http://127.0.0.1:5000/api/grocery_list?weekly_plan_id=${id}`);
-      if (!groceryResponse.ok) {
-        throw new Error("Failed to fetch grocery list");
-      }
-
-      const groceryData = await groceryResponse.json();
-
-      // Sort the grocery list by section order if available
-      const sortedList = groceryData.grocery_list.sort((a, b) => {
-        // Put Uncategorized at the end
-        if (a.section === "Uncategorized") return 1;
-        if (b.section === "Uncategorized") return -1;
-
-        // Sort by order if available
-        if (a.order !== undefined && b.order !== undefined) {
-          return a.order - b.order;
-        }
-
-        // Fall back to alphabetical order
-        return a.section.localeCompare(b.section);
-      });
-
-      setGroceryList(sortedList || []);
-      console.log("Grocery list data:", sortedList);
-      setLoading(false);
-
-    } catch (err) {
-      console.error("Error fetching grocery list:", err);
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
-  // Update the generateGroceryListFromMeals function similarly
-  const generateGroceryListFromMeals = async (meals) => {
-    try {
-      setLoading(true);
-
-      // Generate grocery list from meals array without saving the plan
-      const response = await fetch(`http://127.0.0.1:5000/api/generate_grocery_list`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          meals: meals
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate grocery list");
-      }
-
-      const data = await response.json();
-
-      // Sort the grocery list by section order if available
-      const sortedList = data.grocery_list.sort((a, b) => {
-        // Put Uncategorized at the end
-        if (a.section === "Uncategorized") return 1;
-        if (b.section === "Uncategorized") return -1;
-
-        // Sort by order if available
-        if (a.order !== undefined && b.order !== undefined) {
-          return a.order - b.order;
-        }
-
-        // Fall back to alphabetical order
-        return a.section.localeCompare(b.section);
-      });
-
-      setGroceryList(sortedList || []);
-      setLoading(false);
-
-    } catch (err) {
-      console.error("Error generating grocery list:", err);
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
   const printGroceryList = () => {
     setIsPrinting(true);
     setTimeout(() => {
@@ -198,17 +210,18 @@ function GroceryListView() {
 
   const exportGroceryListToCSV = () => {
     // Create CSV content
-    let csvContent = "Section,Item,Quantity,Unit\n";
+    let csvContent = "Section,Item,Quantity,Unit,Type\n";
 
     groceryList.forEach(section => {
       section.items.forEach(item => {
         // Clean up the item data and escape any commas
         const sectionName = section.section.replace(/,/g, " ");
         const itemName = item.name ? item.name.replace(/,/g, " ") : "";
-        const quantity = item.quantity || "";
+        const quantity = item.formatted_combined || "";
         const unit = item.unit ? item.unit.replace(/,/g, " ") : "";
+        const type = item.is_usda ? "USDA" : "Custom";
 
-        csvContent += `${sectionName},${itemName},${quantity},${unit}\n`;
+        csvContent += `${sectionName},${itemName},${quantity},${unit},${type}\n`;
       });
     });
 
@@ -293,6 +306,20 @@ function GroceryListView() {
     navigate("/weekly-planner");
   };
 
+  // Toggle USDA mode
+  const toggleUsdaMode = () => {
+    setUseUsda(prev => !prev);
+  };
+
+  // Render USDA badge for an ingredient
+  const renderIngredientBadge = (item) => {
+    if (item.is_usda) {
+      return <span className="ingredient-badge usda-badge">USDA</span>;
+    } else {
+      return <span className="ingredient-badge custom-badge">Custom</span>;
+    }
+  };
+
   return (
     <div className={`grocery-list-container ${isPrinting ? 'printing' : ''}`}>
       <div className="grocery-list-header">
@@ -342,8 +369,29 @@ function GroceryListView() {
             {detailedView ? 'Simple View' : 'Detailed View'}
           </button>
 
+          {/* Add USDA toggle button */}
+          <button
+            className={`usda-toggle-btn ${useUsda ? 'active' : ''}`}
+            onClick={toggleUsdaMode}
+          >
+            {useUsda ? 'USDA Enabled' : 'USDA Disabled'}
+          </button>
         </div>
       </div>
+
+      {/* USDA legend when enabled */}
+      {useUsda && !isReordering && !isPrinting && (
+        <div className="ingredient-legend no-print">
+          <div className="legend-item">
+            <span className="ingredient-badge usda-badge">USDA</span>
+            <span>Standardized USDA ingredients</span>
+          </div>
+          <div className="legend-item">
+            <span className="ingredient-badge custom-badge">Custom</span>
+            <span>Custom user-created ingredients</span>
+          </div>
+        </div>
+      )}
 
       {/* Show save button when reordering */}
       {isReordering && (
@@ -422,12 +470,20 @@ function GroceryListView() {
                             unit: item.unit || '',
                             combined_quantity: item.combined_quantity || 0,
                             formatted_combined: item.formatted_combined || '',
-                            has_multiple_units: item.has_multiple_units || false
+                            has_multiple_units: item.has_multiple_units || false,
+                            is_usda: item.is_usda || false, // Add USDA flag
+                            usda_fdc_id: item.usda_fdc_id || null // Add USDA ID
                           };
                         } else {
                           // Update checked state (if any item is checked, the group is checked)
                           if (item.checked) {
                             groupedItems[key].checked = true;
+                          }
+                          
+                          // Update USDA status (if any item is USDA, the group is USDA)
+                          if (item.is_usda) {
+                            groupedItems[key].is_usda = true;
+                            groupedItems[key].usda_fdc_id = item.usda_fdc_id;
                           }
                           
                           // Ensure quantities array exists and is populated
@@ -464,6 +520,7 @@ function GroceryListView() {
                             <div className="item-details">
                               <span className="item-name">
                                 {group.name || "Unnamed Item"}
+                                {useUsda && renderIngredientBadge(group)}
                               </span>
 
                               {detailedView ? (
@@ -488,8 +545,10 @@ function GroceryListView() {
                                   )}
                                 </div>
                               ) : (
-                                // Simple view: don't show any quantities
-                                <span className="item-quantity"></span>
+                                // Simple view: show combined quantity
+                                <span className="item-quantity">
+                                  {group.formatted_combined || ""}
+                                </span>
                               )}
                             </div>
                           </label>

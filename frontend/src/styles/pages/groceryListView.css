@@ -491,3 +491,73 @@
   font-size: 0.9em;
   color: var(--text-light);
 }
+
+/* Add these styles to your existing groceryListView.css file */
+
+/* USDA badge styling */
+.ingredient-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 8px;
+}
+
+.usda-badge {
+  background-color: var(--success-color, #52c41a);
+  color: white;
+}
+
+.custom-badge {
+  background-color: var(--text-light, #999);
+  color: white;
+}
+
+/* Legend for USDA vs. Custom indicators */
+.ingredient-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background-color: var(--background-light, #f9f9f9);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* USDA toggle button */
+.usda-toggle-btn {
+  background-color: var(--background-light, #f9f9f9);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.usda-toggle-btn.active {
+  background-color: var(--success-color, #52c41a);
+  color: white;
+  border-color: var(--success-color, #52c41a);
+}
+
+/* Make sure badges don't break the layout in checked items */
+.grocery-item.checked .item-name {
+  text-decoration: line-through;
+  color: var(--text-light, #999);
+  display: flex;
+  align-items: center;
+}
+
+/* Don't apply line-through to the badge */
+.grocery-item.checked .ingredient-badge {
+  text-decoration: none;
+}

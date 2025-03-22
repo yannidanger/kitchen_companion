@@ -7,6 +7,7 @@ from app.models import (
 from app.utils.grocery_list_aggregation import aggregate_grocery_list, format_for_display
 from app.utils.utils import get_recipe_ingredients, format_ingredient_for_display, deduplicate_sections, map_ingredients_to_sections
 from app.utils.ingredient_aggregator import aggregate_ingredients_with_units
+from app.utils.ingredient_aggregator import aggregate_ingredients_with_usda  # Import the new aggregator
 from .meal_planner import meal_planner_routes
 import logging
 from flask_cors import CORS
@@ -26,6 +27,7 @@ def get_categorized_grocery_list():
     try:
         weekly_plan_id = request.args.get('weekly_plan_id')
         store_id = request.args.get('store_id')
+        use_usda = request.args.get('use_usda', 'true').lower() == 'true'  # Add flag to use USDA integration
 
         if not weekly_plan_id:
             return jsonify({'error': 'Weekly plan ID is required'}), 400
@@ -39,87 +41,115 @@ def get_categorized_grocery_list():
             
         for meal in weekly_plan.meals:
             if meal.recipe_id:
-                # get_recipe_ingredients will automatically filter out sub-recipes
+                recipe = Recipe.query.get(meal.recipe_id)
                 ingredients = get_recipe_ingredients(meal.recipe_id)
+                # Add recipe source info to each ingredient
+                for ingredient in ingredients:
+                    ingredient['recipe_id'] = meal.recipe_id
+                    ingredient['from_recipe'] = recipe.name if recipe else ''
                 all_ingredients.extend(ingredients)
+        
+        logger.info(f"Processing {len(all_ingredients)} ingredients for grocery list")
 
-        ingredient_map = {}
-        for ingredient in all_ingredients:
-            key = (ingredient['item_name'], ingredient.get('unit', ''))
-            if key not in ingredient_map:
-                ingredient_map[key] = ingredient.copy()
-            else:
-                # Handle addition logic...
-                if 'quantity' in ingredient and 'quantity' in ingredient_map[key]:
-                    ingredient_map[key]['quantity'] += ingredient['quantity']
-        
-        consolidated_ingredients = list(ingredient_map.values())
-        logger.debug(f"Consolidated {len(all_ingredients)} ingredients into {len(consolidated_ingredients)} unique items")
-        
+        if use_usda:
+            # Use the enhanced aggregation method that leverages USDA IDs
+            aggregated_ingredients = aggregate_ingredients_with_usda(all_ingredients)
+        else:
+            # Use the original aggregation for backward compatibility
+            aggregated_ingredients = aggregate_ingredients_with_units(all_ingredients)
+            
+        logger.info(f"Aggregated into {len(aggregated_ingredients)} unique ingredients")
+
         # Get all section mappings
         if store_id:
-            # Get all ingredient-section mappings for this store at once
-            mappings = IngredientSection.query.join(Section).filter(Section.store_id == store_id).all()
-            ingredients_to_sections = {mapping.ingredient_id: mapping.section_id for mapping in mappings}
-            
-            logger.debug(f"Found {len(mappings)} ingredient-section mappings")
-                
             # Get all sections for this store
             sections = Section.query.filter_by(store_id=store_id).order_by(Section.order).all()
-            section_dict = {section.id: {'name': section.name, 'order': section.order, 'items': []} for section in sections}
+            section_dict = {section.id: {
+                'name': section.name, 
+                'order': section.order, 
+                'sectionId': section.id,
+                'items': []
+            } for section in sections}
             
             # Add uncategorized bucket
-            section_dict['uncategorized'] = {'name': 'Uncategorized', 'order': 999, 'items': []}
+            section_dict['uncategorized'] = {
+                'name': 'Uncategorized', 
+                'order': 999, 
+                'sectionId': None,
+                'items': []
+            }
             
-            # Assign ingredients to sections
-            for ingredient in consolidated_ingredients:
-                ingredient_id = ingredient.get('id')
-                ingredient_name = ingredient.get('item_name', '').lower()
+            # Get all ingredient-section mappings
+            ingredient_mappings = IngredientSection.query.join(Section).filter(Section.store_id == store_id).all()
+            ingredient_to_section_map = {mapping.ingredient_id: mapping.section_id for mapping in ingredient_mappings}
+            
+            # Map ingredients to sections with improved USDA matching
+            for item in aggregated_ingredients:
+                ingredient_id = item.get('id')
+                usda_fdc_id = item.get('usda_fdc_id')
+                ingredient_name = item.get('normalized_name', '') or item.get('name', '').lower()
+                
+                # Find section for this ingredient
+                section_id = None
                 ingredient_obj = None
                 
-                # Find the ingredient in the database if we have an ID
+                # First try to find by ingredient ID directly
                 if ingredient_id:
                     ingredient_obj = Ingredient.query.get(ingredient_id)
+                    if ingredient_obj and ingredient_obj.id in ingredient_to_section_map:
+                        section_id = ingredient_to_section_map[ingredient_obj.id]
                 
-                # If no ID or not found by ID, try finding by name
-                if not ingredient_obj and ingredient_name:
-                    ingredient_obj = Ingredient.query.filter(Ingredient.name.ilike(f"%{ingredient_name}%")).first()
+                # If not found and we have a USDA ID, try to find any ingredient with that USDA ID
+                if not section_id and usda_fdc_id:
+                    usda_ingredients = Ingredient.query.filter_by(usda_fdc_id=usda_fdc_id).all()
+                    for usda_ing in usda_ingredients:
+                        if usda_ing.id in ingredient_to_section_map:
+                            section_id = ingredient_to_section_map[usda_ing.id]
+                            break
                 
-                # Format the ingredient for display
-                item_data = format_ingredient_for_display(ingredient)
+                # If still not found, try to find by normalized name
+                if not section_id and ingredient_name:
+                    similar_ingredients = Ingredient.query.filter(
+                        Ingredient.name.ilike(f"%{ingredient_name}%")
+                    ).all()
+                    
+                    for similar_ing in similar_ingredients:
+                        if similar_ing.id in ingredient_to_section_map:
+                            section_id = ingredient_to_section_map[similar_ing.id]
+                            break
                 
-                # Assign to correct section if mapping exists
-                if ingredient_obj:
-                    section_id = ingredients_to_sections.get(ingredient_obj.id)
-                    if section_id and section_id in section_dict:
-                        section_dict[section_id]['items'].append(item_data)
-                    else:
-                        # No mapping or section not found, put in uncategorized
-                        section_dict['uncategorized']['items'].append(item_data)
+                # Assign to the correct section or to uncategorized
+                if section_id and section_id in section_dict:
+                    section_dict[section_id]['items'].append(item)
                 else:
-                    # Ingredient not in database, put in uncategorized
-                    section_dict['uncategorized']['items'].append(item_data)
+                    section_dict['uncategorized']['items'].append(item)
             
-            # Convert to list format for response
-            result = []
+            # Convert to list format
+            grocery_list = []
             for section_id, section_data in section_dict.items():
                 if section_data['items']:  # Only include non-empty sections
-                    result.append({
+                    grocery_list.append({
                         'section': section_data['name'],
                         'order': section_data['order'],
+                        'sectionId': section_data['sectionId'],
                         'items': section_data['items']
                     })
             
             # Sort by section order
-            result.sort(key=lambda x: x['order'])
+            grocery_list.sort(key=lambda x: x['order'])
             
-            return jsonify({'grocery_list': result})
+            # Apply deduplication
+            grocery_list = deduplicate_sections(grocery_list)
+            
+            return jsonify({"grocery_list": grocery_list})
         else:
             # No store ID, just return a simple list
-            return jsonify({'grocery_list': consolidated_ingredients})
+            return jsonify({'grocery_list': aggregated_ingredients})
             
     except Exception as e:
         logger.error(f"Error generating grocery list: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
     
 @meal_planner_routes.route('/api/grocery_list', methods=['GET'])
@@ -129,7 +159,8 @@ def get_grocery_list_json():
     try:
         weekly_plan_id = request.args.get('weekly_plan_id')
         logger.info(f"Received request for /api/grocery_list with weekly_plan_id: {weekly_plan_id}")
-        store_id = request.args.get('store_id') 
+        store_id = request.args.get('store_id')
+        use_usda = request.args.get('use_usda', 'true').lower() == 'true'  # Add flag to use USDA integration
         
         # Debug: Log all ingredient-section mappings
         all_mappings = IngredientSection.query.all()
@@ -180,8 +211,12 @@ def get_grocery_list_json():
 
         logger.info(f"Processing {len(all_ingredients)} ingredients for grocery list")
 
-        # Use the new aggregation method
-        aggregated_ingredients = aggregate_ingredients_with_units(all_ingredients)
+        # Use the appropriate aggregation method
+        if use_usda:
+            aggregated_ingredients = aggregate_ingredients_with_usda(all_ingredients)
+        else:
+            aggregated_ingredients = aggregate_ingredients_with_units(all_ingredients)
+            
         logger.info(f"Aggregated into {len(aggregated_ingredients)} unique ingredients")
 
         # Get all sections for this store
@@ -205,30 +240,42 @@ def get_grocery_list_json():
         ingredient_mappings = IngredientSection.query.join(Section).filter(Section.store_id == store_id).all()
         ingredient_to_section_map = {mapping.ingredient_id: mapping.section_id for mapping in ingredient_mappings}
 
-        # Map ingredients to sections
+        # Map ingredients to sections with improved USDA matching
         for item in aggregated_ingredients:
             ingredient_id = item.get('id')
-            ingredient_name = item.get('normalized_name', '')
-            ingredient_obj = None
+            usda_fdc_id = item.get('usda_fdc_id')
+            ingredient_name = item.get('normalized_name', '') or item.get('name', '').lower()
             
-            # Find the ingredient in the database
-            if ingredient_id:
-                ingredient_obj = Ingredient.query.get(ingredient_id)
+            # Find section for this ingredient
+            section_id = None
             
-            # If no ID or not found by ID, try finding by name
-            if not ingredient_obj and ingredient_name:
-                ingredient_obj = Ingredient.query.filter(Ingredient.name.ilike(f"%{ingredient_name}%")).first()
-            
-            # Assign to correct section if mapping exists
-            if ingredient_obj and ingredient_obj.id in ingredient_to_section_map:
-                section_id = ingredient_to_section_map[ingredient_obj.id]
-                if section_id in section_dict:
-                    section_dict[section_id]['items'].append(item)
-                else:
-                    # No mapping or section not found, put in uncategorized
-                    section_dict['uncategorized']['items'].append(item)
+            # First try to find by ingredient ID directly
+            if ingredient_id and ingredient_id in ingredient_to_section_map:
+                section_id = ingredient_to_section_map[ingredient_id]
             else:
-                # Ingredient not in database, put in uncategorized
+                # If not found and we have a USDA ID, try to find any ingredient with that USDA ID
+                if usda_fdc_id:
+                    usda_ingredients = Ingredient.query.filter_by(usda_fdc_id=usda_fdc_id).all()
+                    for usda_ing in usda_ingredients:
+                        if usda_ing.id in ingredient_to_section_map:
+                            section_id = ingredient_to_section_map[usda_ing.id]
+                            break
+                
+                # If still not found, try to find by normalized name
+                if not section_id and ingredient_name:
+                    similar_ingredients = Ingredient.query.filter(
+                        Ingredient.name.ilike(f"%{ingredient_name}%")
+                    ).all()
+                    
+                    for similar_ing in similar_ingredients:
+                        if similar_ing.id in ingredient_to_section_map:
+                            section_id = ingredient_to_section_map[similar_ing.id]
+                            break
+            
+            # Assign to the correct section or to uncategorized
+            if section_id and section_id in section_dict:
+                section_dict[section_id]['items'].append(item)
+            else:
                 section_dict['uncategorized']['items'].append(item)
 
         # Convert to list format
@@ -276,6 +323,7 @@ def generate_grocery_list():
         data = request.get_json()
         meals = data.get('meals', [])
         store_id = data.get('store_id')
+        use_usda = data.get('use_usda', True)  # Default to using USDA integration
         
         if not meals:
             return jsonify({"error": "No meals provided"}), 400
@@ -295,14 +343,16 @@ def generate_grocery_list():
         
         logger.info(f"Retrieved {len(all_ingredients)} raw ingredients from all recipes")
         
-        # Use the new aggregation method
-        aggregated_ingredients = aggregate_ingredients_with_units(all_ingredients)
+        # Use the appropriate aggregation method
+        if use_usda:
+            aggregated_ingredients = aggregate_ingredients_with_usda(all_ingredients)
+        else:
+            aggregated_ingredients = aggregate_ingredients_with_units(all_ingredients)
+            
         logger.info(f"Aggregated into {len(aggregated_ingredients)} unique ingredients")
         
         # If store_id is provided, organize by sections
         if store_id:
-            # Use a similar approach as in map_ingredients_to_sections but adapted for new format
-            
             # Get all sections for this store
             sections = Section.query.filter_by(store_id=store_id).order_by(Section.order).all()
             section_dict = {section.id: {
@@ -324,30 +374,42 @@ def generate_grocery_list():
             ingredient_mappings = IngredientSection.query.join(Section).filter(Section.store_id == store_id).all()
             ingredient_to_section_map = {mapping.ingredient_id: mapping.section_id for mapping in ingredient_mappings}
             
-            # Map ingredients to sections
+            # Map ingredients to sections with improved USDA matching
             for item in aggregated_ingredients:
                 ingredient_id = item.get('id')
-                ingredient_name = item.get('normalized_name', '')
-                ingredient_obj = None
+                usda_fdc_id = item.get('usda_fdc_id')
+                ingredient_name = item.get('normalized_name', '') or item.get('name', '').lower()
                 
-                # Find the ingredient in the database
-                if ingredient_id:
-                    ingredient_obj = Ingredient.query.get(ingredient_id)
+                # Find section for this ingredient
+                section_id = None
                 
-                # If no ID or not found by ID, try finding by name
-                if not ingredient_obj and ingredient_name:
-                    ingredient_obj = Ingredient.query.filter(Ingredient.name.ilike(f"%{ingredient_name}%")).first()
-                
-                # Assign to correct section if mapping exists
-                if ingredient_obj and ingredient_obj.id in ingredient_to_section_map:
-                    section_id = ingredient_to_section_map[ingredient_obj.id]
-                    if section_id in section_dict:
-                        section_dict[section_id]['items'].append(item)
-                    else:
-                        # No mapping or section not found, put in uncategorized
-                        section_dict['uncategorized']['items'].append(item)
+                # First try to find by ingredient ID directly
+                if ingredient_id and ingredient_id in ingredient_to_section_map:
+                    section_id = ingredient_to_section_map[ingredient_id]
                 else:
-                    # Ingredient not in database, put in uncategorized
+                    # If not found and we have a USDA ID, try to find any ingredient with that USDA ID
+                    if usda_fdc_id:
+                        usda_ingredients = Ingredient.query.filter_by(usda_fdc_id=usda_fdc_id).all()
+                        for usda_ing in usda_ingredients:
+                            if usda_ing.id in ingredient_to_section_map:
+                                section_id = ingredient_to_section_map[usda_ing.id]
+                                break
+                    
+                    # If still not found, try to find by normalized name
+                    if not section_id and ingredient_name:
+                        similar_ingredients = Ingredient.query.filter(
+                            Ingredient.name.ilike(f"%{ingredient_name}%")
+                        ).all()
+                        
+                        for similar_ing in similar_ingredients:
+                            if similar_ing.id in ingredient_to_section_map:
+                                section_id = ingredient_to_section_map[similar_ing.id]
+                                break
+                
+                # Assign to the correct section or to uncategorized
+                if section_id and section_id in section_dict:
+                    section_dict[section_id]['items'].append(item)
+                else:
                     section_dict['uncategorized']['items'].append(item)
             
             # Convert to list format

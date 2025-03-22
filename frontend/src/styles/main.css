@@ -8,6 +8,8 @@
 @import './components/forms.css';
 @import './components/navbar.css';
 @import './components/recipeTreeView.css';
+@import './components/IngredientAutocomplete.css';  /* Add this line for the USDA autocomplete */
+
 /* Import store organizer components */
 @import './components/storeorganizer/storeOrganizerBase.css';
 @import './components/storeorganizer/storeSelector.css';
