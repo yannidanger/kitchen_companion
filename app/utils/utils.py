@@ -219,6 +219,7 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
             continue
             
         if ingredient.ingredient:  # Regular ingredient
+            logger.debug(f"INGREDIENT DATA: {ingredient.ingredient.name}: size='{ingredient.size}', descriptor='{ingredient.descriptor}', additional_descriptor='{ingredient.additional_descriptor}'")
             quantity_info = {
                 'quantity': (ingredient.quantity or 0) * quantity_multiplier,
                 'is_fraction': ingredient.is_fraction
@@ -248,19 +249,23 @@ def get_recipe_ingredients(recipe_id, quantity_multiplier=1.0, visited=None):
                 # Handle regular decimal quantities
                 precision_text = f"({(ingredient.quantity or 0) * quantity_multiplier} {ingredient.unit or ''})"
                 
-            result.append({
-                "id": ingredient.ingredient.id,
-                "item_name": ingredient.ingredient.name,
-                "quantity": (ingredient.quantity or 0) * quantity_multiplier,
-                "unit": ingredient.unit or "",
-                "main_text": ingredient.ingredient.name,
-                "precision_text": precision_text,
-                "is_fraction": ingredient.is_fraction,
-                "quantity_numerator": ingredient.quantity_numerator,
-                "quantity_denominator": ingredient.quantity_denominator
-            })
-    
-    # Add ingredients from sub-recipes
+        result.append({
+            "id": ingredient.ingredient.id,
+            "item_name": ingredient.ingredient.name,
+            "quantity": (ingredient.quantity or 0) * quantity_multiplier,
+            "unit": ingredient.unit or "",
+            "size": ingredient.size,  # Don't add default empty string
+            "descriptor": ingredient.descriptor,  # Don't add default empty string
+            "additional_descriptor": ingredient.additional_descriptor,  # Don't add default empty string
+            "main_text": ingredient.ingredient.name,
+            "precision_text": precision_text,
+            "is_fraction": ingredient.is_fraction,
+            "quantity_numerator": ingredient.quantity_numerator,
+            "quantity_denominator": ingredient.quantity_denominator
+        })
+        # Add after creating the result dict
+        print(f"UTILS - get_recipe_ingredients: name='{ingredient.ingredient.name}', size='{ingredient.size}', descriptor='{ingredient.descriptor}', add_descriptor='{ingredient.additional_descriptor}'")
+        print(f"RESULT DICT: size='{result[-1]['size']}', descriptor='{result[-1]['descriptor']}', add_descriptor='{result[-1]['additional_descriptor']}'")
     for component in recipe.components:
         if component.sub_recipe_id:
             sub_quantity = component.quantity or 1.0
@@ -487,3 +492,27 @@ def normalize_ingredient_keys(all_ingredients):
                 normalized_map[key]['quantity'] += ingredient['quantity']
     
     return list(normalized_map.values())
+
+def get_ingredients_from_meal_plan(weekly_plan_id):
+    """Get all ingredients used in a specific meal plan."""
+    from app.models import WeeklyPlan, MealSlot, Recipe, RecipeIngredient, Ingredient
+    
+    try:
+        # Get all recipe IDs from the meal plan
+        meal_slots = MealSlot.query.filter_by(weekly_plan_id=weekly_plan_id).all()
+        recipe_ids = [slot.recipe_id for slot in meal_slots if slot.recipe_id]
+        
+        if not recipe_ids:
+            return []
+        
+        # Get all ingredients for these recipes
+        ingredients = Ingredient.query.join(
+            RecipeIngredient, RecipeIngredient.ingredient_id == Ingredient.id
+        ).filter(
+            RecipeIngredient.recipe_id.in_(recipe_ids)
+        ).distinct().all()
+        
+        return ingredients
+    except Exception as e:
+        logger.error(f"Error getting ingredients from meal plan: {e}")
+        return []

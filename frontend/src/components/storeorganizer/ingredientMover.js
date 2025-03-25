@@ -6,7 +6,9 @@ const IngredientMover = ({
     setTargetSection, 
     moveSelectedIngredients, 
     clearSelections,
-    selectedIngredients = {} // Add this prop
+    selectedIngredients = {},
+    filteredCount = 0,
+    totalCount = "all"
 }) => {
     // Count selected ingredients
     const selectedCount = Object.values(selectedIngredients).filter(Boolean).length;
@@ -16,7 +18,12 @@ const IngredientMover = ({
             <div className="mover-heading">
                 <h3>Move Ingredients Between Sections</h3>
                 <div className="selection-counter">
-                    {selectedCount} selected
+                    <span>{selectedCount} selected</span>
+                    <div className="total-counter">
+                        {totalCount === "filtered" 
+                            ? `Showing ${filteredCount} filtered ingredients` 
+                            : `${filteredCount} ingredients total`}
+                    </div>
                 </div>
             </div>
             

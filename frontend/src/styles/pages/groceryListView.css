@@ -239,15 +239,6 @@
   width: 100%;
 }
 
-.item-name {
-  font-weight: 500;
-}
-
-.item-quantity {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
 .grocery-item.checked .item-name {
   text-decoration: line-through;
   color: var(--text-light);
@@ -444,14 +435,12 @@
 
 /* Add these to your groceryListView.css file */
 .item-name {
+  display: inline-block !important;
   font-weight: 500;
-  color: #333 !important; /* Force dark text color */
+  color: #333 !important;
+  text-transform: capitalize;
 }
 
-.item-quantity {
-  color: #666 !important; /* Force medium gray text color */
-  font-size: var(--font-size-sm);
-}
 
 /* Toggle button */
 .detail-toggle-btn {
@@ -490,6 +479,7 @@
   font-style: italic;
   font-size: 0.9em;
   color: var(--text-light);
+  margin-left: auto;
 }
 
 /* Add these styles to your existing groceryListView.css file */
@@ -560,4 +550,55 @@
 /* Don't apply line-through to the badge */
 .grocery-item.checked .ingredient-badge {
   text-decoration: none;
+}
+
+.detailed-info {
+  display: inline-block;
+  margin-left: 8px;
+  font-style: italic;
+  color: #666;
+}
+
+.item-size {
+  color: #555;
+  word-spacing: 10px;
+  margin-right: 10px;
+}
+
+.item-descriptor {
+  font-weight: 500;
+}
+
+.item-preparation {
+  font-style: italic;
+}
+
+/* Add a separator between elements */
+.item-size + .item-descriptor::before,
+.item-descriptor + .item-preparation::before {
+  content: " • ";
+  font-style: normal;
+  color: #999;
+}
+
+.hide-details .detailed-info {
+  display: none !important;
+}
+
+/* Hide the source recipe info in non-detailed view */
+.hide-details .quantity-source {
+  display: none !important;
+}
+
+.hide-details .item-quantity {
+  display: none !important;
+}
+
+/* Only hide the detailed-info part inside item-quantity */
+.hide-details .item-quantity .detailed-info {
+  display: none !important;
+}
+
+.grocery-list-container:not(.hide-details) .item-quantity {
+  display: inline-block !important;
 }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import StoreSelector from "./storeSelector";
 import SectionManager from "./sectionManager";
 import IngredientMover from "./ingredientMover";
@@ -9,6 +9,11 @@ import DebugButton from "./debugButton";
 
 const StoreOrganizerSimple = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    // Get weekly_plan_id from URL query params
+    const queryParams = new URLSearchParams(location.search);
+    const weeklyPlanId = queryParams.get('weekly_plan_id');
+
     const [sections, setSections] = useState([]);
     const [ingredients, setIngredients] = useState([]);
     const [stores, setStores] = useState([]);
@@ -19,91 +24,70 @@ const StoreOrganizerSimple = () => {
     const [selectedIngredients, setSelectedIngredients] = useState({});
     const [targetSection, setTargetSection] = useState("");
     const [newSectionName, setNewSectionName] = useState("");
+    const [filterOptions, setFilterOptions] = useState({
+        showMealPlanOnly: Boolean(weeklyPlanId),
+        showUnmappedOnly: true,
+    });
 
-
-    const createDefaultStore = useCallback(async () => {
+    const fetchIngredients = async (storeId, options = {}) => {
         try {
-            const response = await fetch("http://127.0.0.1:5000/api/stores", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: "My Store",
-                    sections: [
-                        { name: "Produce", order: 0 },
-                        { name: "Dairy", order: 1 },
-                        { name: "Meat", order: 2 },
-                        { name: "Bakery", order: 3 },
-                        { name: "Frozen", order: 4 },
-                        { name: "Canned Goods", order: 5 },
-                        { name: "Uncategorized", order: 6 }
-                    ]
-                })
-            });
+            const { showMealPlanOnly, showUnmappedOnly } = options;
+            let url = "http://127.0.0.1:5000/api/ingredients";
 
-            const data = await response.json();
+            // Build query parameters
+            const params = new URLSearchParams();
 
-            if (data.store_id) {
-                const storesResponse = await fetch("http://127.0.0.1:5000/api/stores");
-                const storesData = await storesResponse.json();
-                setStores(storesData);
-
-                if (storesData.length > 0) {
-                    setSelectedStore(storesData[0].id);
-                    fetchStoreData(storesData[0].id);
-                }
+            if (showMealPlanOnly && weeklyPlanId) {
+                params.append('weekly_plan_id', weeklyPlanId);
             }
-        } catch (error) {
-            console.error("Error creating default store:", error);
-            setLoading(false);
-        }
-    }, []); // ✅ Now it's stable
 
-    const fetchStores = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await fetch("http://127.0.0.1:5000/api/stores");
-            const storesData = await response.json();
-            setStores(storesData);
-
-            if (storesData.length > 0) {
-                setSelectedStore(storesData[0].id);
-                fetchStoreData(storesData[0].id);
-            } else {
-                await createDefaultStore();
+            if (showUnmappedOnly && storeId) {
+                params.append('unmapped_only', 'true');
+                params.append('store_id', storeId);
             }
-        } catch (error) {
-            console.error("Error fetching stores:", error);
-            setLoading(false);
-        }
-    }, [createDefaultStore]); // ✅ Now includes createDefaultStore
 
-    useEffect(() => {
-        fetchStores();
-    }, [fetchStores]); // ✅ Warning should be gone now
+            // Add params to URL if any exist
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ingredients: ${response.statusText}`);
+            }
+
+            const ingredientsData = await response.json();
+            setIngredients(ingredientsData);
+            return ingredientsData;
+
+        } catch (error) {
+            console.error("Error fetching ingredients:", error);
+            return [];
+        }
+    };
 
     const fetchStoreData = async (storeId) => {
         try {
             setLoading(true);
+
+            // Fetch sections
             const sectionsResponse = await fetch(`http://127.0.0.1:5000/api/stores/${storeId}/sections`);
             if (!sectionsResponse.ok) {
                 throw new Error(`Failed to fetch sections: ${sectionsResponse.statusText}`);
             }
             const sectionsData = await sectionsResponse.json();
 
-            // Filter out duplicate sections (keeping only the first occurrence of each name)
+            // Filter out duplicate sections
             const uniqueSections = sectionsData.filter((section, index, self) =>
                 index === self.findIndex(s => s.name.toLowerCase() === section.name.toLowerCase())
             );
 
             setSections(uniqueSections);
 
-            const ingredientsResponse = await fetch("http://127.0.0.1:5000/api/ingredients");
-            if (!ingredientsResponse.ok) {
-                throw new Error(`Failed to fetch ingredients: ${ingredientsResponse.statusText}`);
-            }
-            const ingredientsData = await ingredientsResponse.json();
-            setIngredients(ingredientsData);
+            // Fetch ingredients with current filter options
+            await fetchIngredients(storeId, filterOptions);
 
+            // Fetch ingredient-section mappings
             const mappingsResponse = await fetch(`http://127.0.0.1:5000/api/ingredient_sections?store_id=${storeId}`);
             if (!mappingsResponse.ok) {
                 throw new Error(`Failed to fetch ingredient mappings: ${mappingsResponse.statusText}`);
@@ -123,12 +107,86 @@ const StoreOrganizerSimple = () => {
         }
     };
 
-    const handleStoreChange = (storeId) => {
-        setSelectedStore(storeId);
-        fetchStoreData(storeId);
+    const createNewStore = async (storeName) => {
+        try {
+            const response = await fetch("http://127.0.0.1:5000/api/stores", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: storeName,
+                    sections: [
+                        { name: "Produce", order: 0 },
+                        { name: "Dairy", order: 1 },
+                        { name: "Meat", order: 2 },
+                        { name: "Bakery", order: 3 },
+                        { name: "Frozen", order: 4 },
+                        { name: "Canned Goods", order: 5 },
+                        { name: "Uncategorized", order: 6 }
+                    ]
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.store_id) {
+                // Refresh the store list
+                const storesResponse = await fetch("http://127.0.0.1:5000/api/stores");
+                const storesData = await storesResponse.json();
+                setStores(storesData);
+
+                if (storesData.length > 0) {
+                    setSelectedStore(data.store_id);
+                    await fetchStoreData(data.store_id);
+                }
+            }
+        } catch (error) {
+            console.error("Error creating store:", error);
+            alert("Failed to create store. Please try again.");
+        }
     };
 
-    // In storeOrganizerSimple.js, modify the addNewSection function:
+    // Load initial data
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch("http://127.0.0.1:5000/api/stores");
+                const storesData = await response.json();
+                setStores(storesData);
+
+                if (storesData.length > 0) {
+                    setSelectedStore(storesData[0].id);
+                    await fetchStoreData(storesData[0].id);
+                } else {
+                    // Create default store if none exist
+                    await createNewStore("My Store");
+                }
+            } catch (error) {
+                console.error("Error loading initial data:", error);
+                setLoading(false);
+            }
+        };
+
+        fetchInitialData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleStoreChange = async (storeId) => {
+        setSelectedStore(storeId);
+        await fetchStoreData(storeId);
+    };
+
+    const handleFilterChange = async (newOptions) => {
+        const updatedOptions = { ...filterOptions, ...newOptions };
+        setFilterOptions(updatedOptions);
+
+        if (selectedStore) {
+            setLoading(true);
+            await fetchIngredients(selectedStore, updatedOptions);
+            setLoading(false);
+        }
+    };
+
     const addNewSection = (name) => {
         if (!name.trim()) {
             alert("Please enter a section name");
@@ -222,6 +280,11 @@ const StoreOrganizerSimple = () => {
         setIngredientSections(updatedSectionMap);
         setSelectedIngredients({});
         setTargetSection("");
+
+        // If showing unmapped only, refresh the ingredient list
+        if (filterOptions.showUnmappedOnly) {
+            fetchIngredients(selectedStore, filterOptions);
+        }
     };
 
     const saveOrganization = async () => {
@@ -275,6 +338,7 @@ const StoreOrganizerSimple = () => {
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
 
+            // Refresh data after saving
             await fetchStoreData(selectedStore);
 
         } catch (error) {
@@ -291,40 +355,9 @@ const StoreOrganizerSimple = () => {
     };
 
     const getUncategorizedIngredients = () => {
-        // Return ONLY ingredients with no section mapping
-        return ingredients.filter(ing => !ingredientSections[ing.id]);
-    };
-
-    // Add this function to storeOrganizerSimple.js
-    const createNewStore = async (storeName) => {
-        try {
-            const response = await fetch("http://127.0.0.1:5000/api/stores", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: storeName,
-                    sections: [
-                        { name: "Produce", order: 0 },
-                        { name: "Dairy", order: 1 },
-                        { name: "Meat", order: 2 },
-                        { name: "Bakery", order: 3 },
-                        { name: "Frozen", order: 4 },
-                        { name: "Canned Goods", order: 5 },
-                        { name: "Uncategorized", order: 6 }
-                    ]
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.store_id) {
-                // Refresh the store list
-                fetchStores();
-            }
-        } catch (error) {
-            console.error("Error creating store:", error);
-            alert("Failed to create store. Please try again.");
-        }
+        return ingredients.filter(ing =>
+            !ingredientSections[ing.id] && ing.name && ing.name.trim() !== ""
+        );
     };
 
     const debugIngredientMove = () => {
@@ -332,6 +365,8 @@ const StoreOrganizerSimple = () => {
         console.log("Current ingredient sections mapping:", ingredientSections);
         console.log("Selected ingredients:", selectedIngredients);
         console.log("Target section:", targetSection);
+        console.log("Filter options:", filterOptions);
+        console.log("Total ingredients loaded:", ingredients.length);
 
         sections.forEach(section => {
             const sectionIngredients = ingredients.filter(ing =>
@@ -346,6 +381,33 @@ const StoreOrganizerSimple = () => {
         console.log("Uncategorized should have:", uncategorized.map(ing => ing.name));
     };
 
+    // Filter panel component
+    const FilterPanel = () => (
+        <div className="filter-panel">
+            <h3>Filter Options</h3>
+            <div className="filter-options">
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={filterOptions.showMealPlanOnly}
+                        onChange={(e) => handleFilterChange({ showMealPlanOnly: e.target.checked })}
+                        disabled={!weeklyPlanId}
+                    />
+                    <span>Show only ingredients from current meal plan</span>
+                </label>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={filterOptions.showUnmappedOnly}
+                        onChange={(e) => handleFilterChange({ showUnmappedOnly: e.target.checked })}
+                    />
+                    <span>Show only unmapped ingredients</span>
+                </label>
+            </div>
+        </div>
+    );
+
     return (
         <div className="store-organizer-container">
             <div className="store-organizer-header">
@@ -354,32 +416,38 @@ const StoreOrganizerSimple = () => {
             </div>
 
             <div className="store-organizer-controls">
-                <DebugButton onClick={debugIngredientMove} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '15px' }}>
+                    <button
+                        className="back-btn"
+                        onClick={() => navigate('/grocery-list')}
+                    >
+                        ← Back to Grocery List
+                    </button>
 
-                <button
-                    className="back-btn"
-                    onClick={() => navigate('/grocery-list')}
-                >
-                    ← Back to Grocery List
-                </button>
+                    <DebugButton onClick={debugIngredientMove} />
 
-                <StoreSelector
-                    stores={stores}
-                    selectedStore={selectedStore}
-                    onChange={handleStoreChange}
-                    onCreateStore={createNewStore}
-                />
+                    <SaveButton
+                        saveSuccess={saveSuccess}
+                        onClick={saveOrganization}
+                    />
+                </div>
 
-                <SectionManager
-                    newSectionName={newSectionName}
-                    setNewSectionName={setNewSectionName}
-                    addNewSection={addNewSection}
-                />
+                <div style={{ display: 'flex', gap: '20px', width: '100%' }}>
+                    <StoreSelector
+                        stores={stores}
+                        selectedStore={selectedStore}
+                        onChange={handleStoreChange}
+                        onCreateStore={createNewStore}
+                    />
 
-                <SaveButton
-                    saveSuccess={saveSuccess}
-                    onClick={saveOrganization}
-                />
+                    <SectionManager
+                        newSectionName={newSectionName}
+                        setNewSectionName={setNewSectionName}
+                        addNewSection={addNewSection}
+                    />
+                </div>
+
+                <FilterPanel />
             </div>
 
             {loading ? (
@@ -392,7 +460,9 @@ const StoreOrganizerSimple = () => {
                         setTargetSection={setTargetSection}
                         moveSelectedIngredients={moveSelectedIngredients}
                         clearSelections={clearSelections}
-                        selectedIngredients={selectedIngredients} // Add this prop
+                        selectedIngredients={selectedIngredients}
+                        filteredCount={ingredients.length}
+                        totalCount={filterOptions.showMealPlanOnly || filterOptions.showUnmappedOnly ? "filtered" : ingredients.length}
                     />
 
                     <SectionGrid
@@ -409,6 +479,11 @@ const StoreOrganizerSimple = () => {
 
             <div className="organizer-tip">
                 <p>Tip: Check the ingredients you want to move, select a target section, and click "Move Selected".</p>
+                {weeklyPlanId && (
+                    <p className="meal-plan-notice">Currently showing ingredients from selected meal plan.
+                        {filterOptions.showUnmappedOnly ? " Only unmapped ingredients are displayed." : ""}
+                    </p>
+                )}
             </div>
         </div>
     );

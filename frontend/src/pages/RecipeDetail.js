@@ -84,7 +84,7 @@ function RecipeDetail() {
     // Fetch available sub-recipes
     const fetchAvailableSubRecipes = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5000/api/sub_recipes/");
+        const response = await fetch(/api/sub_recipes);
         const data = await response.json();
         setAvailableSubRecipes(data);
       } catch (error) {
@@ -95,7 +95,7 @@ function RecipeDetail() {
     // Fetch the recipe details
     const fetchRecipe = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/recipes/${recipeId}`);
+        const response = await fetch(`/api/recipes/${recipeId}`);
         const data = await response.json();
         console.log("Recipe data from API:", JSON.stringify(data, null, 2));
         setRecipe(data);
@@ -270,7 +270,7 @@ function RecipeDetail() {
 
       console.log("Payload being sent to API:", JSON.stringify(payload, null, 2));
 
-      const response = await fetch(`http://127.0.0.1:5000/api/recipes/${recipeId}`, {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"

@@ -103,6 +103,11 @@ def aggregate_ingredients_with_usda(ingredients):
         usda_fdc_id = ingredient.get('usda_fdc_id')
         ingredient_id = ingredient.get('id') or ingredient.get('ingredient_id')
         
+        # Get additional descriptive fields - ensure they're included
+        size = ingredient.get('size', '')
+        descriptor = ingredient.get('descriptor', '')
+        preparation = ingredient.get('additional_descriptor', '')
+        
         # Normalize the name for matching (used when no USDA ID available)
         normalized_name = normalize_ingredient_name(name)
         
@@ -135,8 +140,14 @@ def aggregate_ingredients_with_usda(ingredients):
                 'quantities': [],
                 'primary_unit': unit,  # Use first unit as primary
                 'combined_quantity': 0,
-                'category': ingredient.get('category')
+                'category': ingredient.get('category'),
+                'size': size,
+                'descriptor': descriptor,
+                'additional_descriptor': preparation  # Store as additional_descriptor to match frontend
             }
+            
+            # Add debugging log for newly created items
+            logger.debug(f"New aggregated ingredient {name}: size='{size}', descriptor='{descriptor}', preparation='{preparation}'")
         
         # Add this quantity/unit combination
         found = False
@@ -202,8 +213,15 @@ def format_ingredients_for_display(aggregated_ingredients):
             'combined_quantity': item['combined_quantity'],
             'formatted_combined': formatted_combined,
             'has_multiple_units': len(set(q['unit'] for q in item['quantities'])) > 1,
-            'category': item['category']
+            'category': item['category'],
+            'size': item.get('size'),  # Don't add default value
+            'descriptor': item.get('descriptor'),  # Don't add default value
+            'additional_descriptor': item.get('additional_descriptor')  # Don't add default value
         }
+        
+        # Debug output
+        logger.debug(f"Result item: {result_item['name']}, size='{result_item.get('size')}', descriptor='{result_item.get('descriptor')}', additional_descriptor='{result_item.get('additional_descriptor')}'")
+        
         result.append(result_item)
     
     return result

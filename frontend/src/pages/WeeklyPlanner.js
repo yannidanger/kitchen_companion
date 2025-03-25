@@ -11,15 +11,15 @@ function WeeklyPlanner() {
   const [availablePlans, setAvailablePlans] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
-  
+
   const days = useMemo(() => [
-    "Monday", "Tuesday", "Wednesday", "Thursday", 
+    "Monday", "Tuesday", "Wednesday", "Thursday",
     "Friday", "Saturday", "Sunday"
   ], []);
-  
+
   // Available meal types
   const defaultMealTypes = useMemo(() => ["Breakfast", "Lunch", "Dinner"], []);
-  
+
   // Custom meal slots state
   const [customMealSlots, setCustomMealSlots] = useState({});
   const [newCustomSlot, setNewCustomSlot] = useState({
@@ -56,11 +56,11 @@ function WeeklyPlanner() {
 
   const fetchPlanDetails = async (planId) => {
     if (!planId) return;
-    
+
     try {
       const response = await fetch(`http://127.0.0.1:5000/api/weekly_plan/${planId}`);
       const data = await response.json();
-      
+
       // Transform the data to our expected format
       const transformedPlan = {
         name: data.name,
@@ -70,29 +70,29 @@ function WeeklyPlanner() {
           recipe_id: meal.recipe_id
         }))
       };
-      
+
       setWeeklyPlan(transformedPlan);
-      
+
       // Populate custom meal slots from existing data
       const customSlots = {};
       data.meals.forEach(meal => {
         // If this isn't a default meal type, add it to custom slots
         if (!defaultMealTypes.includes(meal.meal_type.split(" (")[0])) {
-          const [mealName, person] = meal.meal_type.includes(" (") ? 
-            [meal.meal_type.split(" (")[0], meal.meal_type.split(" (")[1].replace(")", "")] : 
+          const [mealName, person] = meal.meal_type.includes(" (") ?
+            [meal.meal_type.split(" (")[0], meal.meal_type.split(" (")[1].replace(")", "")] :
             [meal.meal_type, ""];
-            
+
           if (!customSlots[meal.day]) {
             customSlots[meal.day] = [];
           }
-          
+
           customSlots[meal.day].push({
             name: mealName,
             person: person
           });
         }
       });
-      
+
       setCustomMealSlots(customSlots);
     } catch (error) {
       console.error("Error fetching plan details:", error);
@@ -100,10 +100,10 @@ function WeeklyPlanner() {
   };
 
   // Initialize meal slots for each day and default meal types
-// Initialize meal slots for each day and default meal types
-useEffect(() => {
+  // Initialize meal slots for each day and default meal types
+  useEffect(() => {
     const initialMeals = [];
-    
+
     days.forEach(day => {
       defaultMealTypes.forEach(mealType => {
         initialMeals.push({
@@ -112,14 +112,14 @@ useEffect(() => {
           recipe_id: ""
         });
       });
-      
+
       // Add custom meal slots if any
       if (customMealSlots[day]) {
         customMealSlots[day].forEach(slot => {
-          const mealType = slot.person ? 
-            `${slot.name} (${slot.person})` : 
+          const mealType = slot.person ?
+            `${slot.name} (${slot.person})` :
             slot.name;
-            
+
           initialMeals.push({
             day: day,
             meal_type: mealType,
@@ -128,7 +128,7 @@ useEffect(() => {
         });
       }
     });
-    
+
     setWeeklyPlan(prev => ({
       ...prev,
       meals: initialMeals
@@ -154,13 +154,13 @@ useEffect(() => {
       alert("Please enter a name for the custom meal slot");
       return;
     }
-    
+
     const day = newCustomSlot.day;
     const newSlot = {
       name: newCustomSlot.name,
       person: newCustomSlot.person
     };
-    
+
     setCustomMealSlots(prev => {
       const updatedSlots = { ...prev };
       if (!updatedSlots[day]) {
@@ -169,7 +169,7 @@ useEffect(() => {
       updatedSlots[day] = [...updatedSlots[day], newSlot];
       return updatedSlots;
     });
-    
+
     // Reset the form
     setNewCustomSlot({
       day: days[0],
@@ -183,29 +183,29 @@ useEffect(() => {
     setCustomMealSlots(prev => {
       const updatedSlots = { ...prev };
       updatedSlots[day] = updatedSlots[day].filter((_, i) => i !== index);
-      
+
       // If there are no more slots for this day, remove the day entry
       if (updatedSlots[day].length === 0) {
         delete updatedSlots[day];
       }
-      
+
       return updatedSlots;
     });
-    
+
     // Also remove from the weekly plan if it exists
     setWeeklyPlan(prev => {
-      const mealType = prev.meals.find(meal => 
-        meal.day === day && 
+      const mealType = prev.meals.find(meal =>
+        meal.day === day &&
         meal.meal_type === `${customMealSlots[day][index].name} (${customMealSlots[day][index].person})`
       )?.meal_type;
-      
+
       if (mealType) {
         return {
           ...prev,
           meals: prev.meals.filter(meal => !(meal.day === day && meal.meal_type === mealType))
         };
       }
-      
+
       return prev;
     });
   };
@@ -215,12 +215,12 @@ useEffect(() => {
     try {
       // Filter out meals with no recipe selected
       const filledMeals = weeklyPlan.meals.filter(meal => meal.recipe_id);
-      
+
       if (filledMeals.length === 0) {
         alert("Please select at least one recipe for your meal plan");
         return;
       }
-      
+
       const response = await fetch("http://127.0.0.1:5000/api/weekly_plan", {
         method: "POST",
         headers: {
@@ -231,22 +231,22 @@ useEffect(() => {
           meals: filledMeals
         })
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to save weekly plan");
       }
-      
+
       await response.json();
       setSavedSuccessfully(true);
-      
+
       // Refresh the available plans list
       fetchSavedPlans();
-      
+
       // Set a timeout to hide the success message after 3 seconds
       setTimeout(() => {
         setSavedSuccessfully(false);
       }, 3000);
-      
+
     } catch (error) {
       console.error("Error saving weekly plan:", error);
       alert("Error saving weekly plan: " + error.message);
@@ -258,21 +258,21 @@ useEffect(() => {
     try {
       // Filter out meals with no recipe selected
       const filledMeals = weeklyPlan.meals.filter(meal => meal.recipe_id);
-      
+
       if (filledMeals.length === 0) {
         alert("Please select at least one recipe for your meal plan");
         return;
       }
-      
+
       // Navigate to grocery list page with plan data
       // We'll need to create a new route and component for this
-      navigate("/grocery-list-preview", { 
-        state: { 
+      navigate("/grocery-list-preview", {
+        state: {
           meals: filledMeals,
           planName: weeklyPlan.name
-        } 
+        }
       });
-      
+
     } catch (error) {
       console.error("Error generating grocery list:", error);
       alert("Error generating grocery list: " + error.message);
@@ -291,7 +291,7 @@ useEffect(() => {
   const handleSelectPlan = (e) => {
     const planId = e.target.value;
     setSelectedPlanId(planId);
-    
+
     if (planId) {
       fetchPlanDetails(planId);
     } else {
@@ -320,14 +320,14 @@ useEffect(() => {
           </div>
         )}
       </div>
-      
+
       <div className="plan-controls">
         {/* Load saved plan dropdown */}
         <div className="plan-selector">
           <label htmlFor="saved-plans">Load Saved Plan:</label>
-          <select 
-            id="saved-plans" 
-            value={selectedPlanId} 
+          <select
+            id="saved-plans"
+            value={selectedPlanId}
             onChange={handleSelectPlan}
           >
             <option value="">Create New</option>
@@ -338,76 +338,83 @@ useEffect(() => {
             ))}
           </select>
         </div>
-        
+
         {/* Plan name input */}
         <div className="plan-name-container">
           <label htmlFor="plan-name">Plan Name:</label>
-          <input 
+          <input
             id="plan-name"
-            type="text" 
+            type="text"
             value={weeklyPlan.name}
             onChange={handlePlanNameChange}
             placeholder="Enter a name for your meal plan"
           />
         </div>
-        
+
         {/* Save and generate grocery list buttons */}
         <div className="plan-actions">
-          <button 
-            className="save-plan-btn" 
+          <button
+            className="save-plan-btn"
             onClick={saveWeeklyPlan}
           >
             Save Plan
           </button>
-          <button 
-            className="generate-list-btn" 
+          <button
+            className="organize-ingredients-btn"
+            onClick={() => navigate(`/store-organizer?weekly_plan_id=${selectedPlanId}`)}
+            disabled={!selectedPlanId}
+          >
+            Organize Ingredients for This Meal Plan
+          </button>
+          <button
+            className="generate-list-btn"
             onClick={generateGroceryList}
           >
             Generate Grocery List
           </button>
         </div>
       </div>
-      
+
       {/* Custom meal slot creator */}
       <div className="custom-meal-creator">
         <h3>Add Custom Meal Slot</h3>
         <div className="custom-meal-form">
           <div className="form-group">
             <label htmlFor="custom-day">Day:</label>
-            <select 
+            <select
               id="custom-day"
-              value={newCustomSlot.day} 
-              onChange={(e) => setNewCustomSlot({...newCustomSlot, day: e.target.value})}
+              value={newCustomSlot.day}
+              onChange={(e) => setNewCustomSlot({ ...newCustomSlot, day: e.target.value })}
             >
               {days.map(day => (
                 <option key={day} value={day}>{day}</option>
               ))}
             </select>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="custom-name">Meal Name:</label>
-            <input 
+            <input
               id="custom-name"
-              type="text" 
+              type="text"
               value={newCustomSlot.name}
-              onChange={(e) => setNewCustomSlot({...newCustomSlot, name: e.target.value})}
+              onChange={(e) => setNewCustomSlot({ ...newCustomSlot, name: e.target.value })}
               placeholder="e.g., Snack, Dessert"
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="custom-person">Person (Optional):</label>
-            <input 
+            <input
               id="custom-person"
-              type="text" 
+              type="text"
               value={newCustomSlot.person}
-              onChange={(e) => setNewCustomSlot({...newCustomSlot, person: e.target.value})}
+              onChange={(e) => setNewCustomSlot({ ...newCustomSlot, person: e.target.value })}
               placeholder="e.g., Johnny, Suzy"
             />
           </div>
-          
-          <button 
+
+          <button
             className="add-custom-btn"
             onClick={addCustomMealSlot}
           >
@@ -415,7 +422,7 @@ useEffect(() => {
           </button>
         </div>
       </div>
-      
+
       {/* Weekly meal planner grid */}
       <div className="meal-planner-grid">
         <div className="day-headers">
@@ -426,7 +433,7 @@ useEffect(() => {
             </div>
           ))}
         </div>
-        
+
         {/* Default meal types */}
         {defaultMealTypes.map(mealType => (
           <div className="meal-row" key={mealType}>
@@ -436,11 +443,11 @@ useEffect(() => {
                 m => m.day === day && m.meal_type === mealType
               );
               const recipeId = meal ? meal.recipe_id : "";
-              
+
               return (
                 <div key={`${day}-${mealType}`} className="meal-cell">
-                  <select 
-                    value={recipeId} 
+                  <select
+                    value={recipeId}
                     onChange={(e) => handleRecipeSelect(day, mealType, e.target.value)}
                   >
                     <option value="">Select a recipe...</option>
@@ -460,40 +467,40 @@ useEffect(() => {
             })}
           </div>
         ))}
-        
+
         {/* Custom meal slots for each day */}
-        {Object.entries(customMealSlots).map(([day, slots]) => 
+        {Object.entries(customMealSlots).map(([day, slots]) =>
           slots.map((slot, index) => {
             const mealType = slot.person ? `${slot.name} (${slot.person})` : slot.name;
             const meal = weeklyPlan.meals.find(
               m => m.day === day && m.meal_type === mealType
             );
             const recipeId = meal ? meal.recipe_id : "";
-            
+
             return (
-              <div 
-                className="custom-meal-row" 
+              <div
+                className="custom-meal-row"
                 key={`${day}-${mealType}-${index}`}
               >
                 <div className="meal-type-label custom-meal">
                   <span>{mealType}</span>
-                  <button 
+                  <button
                     className="remove-slot-btn"
                     onClick={() => removeCustomMealSlot(day, index)}
                   >
                     ✕
                   </button>
                 </div>
-                
+
                 {days.map(gridDay => (
-                  <div 
-                    key={`${gridDay}-${mealType}`} 
+                  <div
+                    key={`${gridDay}-${mealType}`}
                     className={`meal-cell ${gridDay === day ? 'active' : 'inactive'}`}
                   >
                     {gridDay === day ? (
                       <>
-                        <select 
-                          value={recipeId} 
+                        <select
+                          value={recipeId}
                           onChange={(e) => handleRecipeSelect(day, mealType, e.target.value)}
                         >
                           <option value="">Select a recipe...</option>

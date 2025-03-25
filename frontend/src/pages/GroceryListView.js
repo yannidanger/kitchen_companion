@@ -40,6 +40,24 @@ function GroceryListView() {
       }
 
       const groceryData = await groceryResponse.json();
+      console.log("Raw grocery list data:", groceryData.grocery_list);
+
+      console.log("=== DETAILED API INSPECTION ===");
+      groceryData.grocery_list.forEach(section => {
+        console.log(`Section: ${section.section}`);
+        section.items.forEach(item => {
+          console.log(`Item: ${item.name}`, {
+            size_exists: 'size' in item,
+            descriptor_exists: 'descriptor' in item,
+            additional_descriptor_exists: 'additional_descriptor' in item,
+            preparation_exists: 'preparation' in item,
+            size: item.size,
+            descriptor: item.descriptor,
+            additional_descriptor: item.additional_descriptor,
+            preparation: item.preparation
+          });
+        });
+      });
 
       // Sort the grocery list by section order if available
       const sortedList = groceryData.grocery_list.sort((a, b) => {
@@ -213,6 +231,7 @@ function GroceryListView() {
     let csvContent = "Section,Item,Quantity,Unit,Type\n";
 
     groceryList.forEach(section => {
+      console.log("Processing section:", section.section);
       section.items.forEach(item => {
         // Clean up the item data and escape any commas
         const sectionName = section.section.replace(/,/g, " ");
@@ -280,23 +299,24 @@ function GroceryListView() {
     setGroceryList(prevList => {
       const newList = JSON.parse(JSON.stringify(prevList)); // Deep copy
       const section = newList[sectionIndex];
-      
+
       // Find all items in this section that match the groupKey
-      const groupItems = section.items.filter(item => 
+      const groupItems = section.items.filter(item =>
         (item.normalized_name || item.name.toLowerCase()) === groupKey
       );
-      
+
       // Determine the new checked state (toggle based on current state)
       const currentCheckedState = groupItems.length > 0 && groupItems[0].checked;
       const newCheckedState = !currentCheckedState;
-      
+
       // Update all matching items
+      console.log("Processing section:", section.section);
       section.items.forEach(item => {
         if ((item.normalized_name || item.name.toLowerCase()) === groupKey) {
           item.checked = newCheckedState;
         }
       });
-      
+
       return newList;
     });
   };
@@ -321,7 +341,7 @@ function GroceryListView() {
   };
 
   return (
-    <div className={`grocery-list-container ${isPrinting ? 'printing' : ''}`}>
+    <div className={`grocery-list-container ${isPrinting ? 'printing' : ''} ${!detailedView ? 'hide-details' : ''}`}>
       <div className="grocery-list-header">
         <h1>Grocery List</h1>
         {planDetails && (
@@ -456,10 +476,11 @@ function GroceryListView() {
                     {(() => {
                       // Group items by normalized name
                       const groupedItems = {};
-                      
+                      console.log("Processing section:", section.section);
+
                       section.items.forEach(item => {
                         const key = item.normalized_name || item.name.toLowerCase();
-                        
+
                         if (!groupedItems[key]) {
                           // Initialize the group with the first item
                           groupedItems[key] = {
@@ -471,21 +492,25 @@ function GroceryListView() {
                             combined_quantity: item.combined_quantity || 0,
                             formatted_combined: item.formatted_combined || '',
                             has_multiple_units: item.has_multiple_units || false,
-                            is_usda: item.is_usda || false, // Add USDA flag
-                            usda_fdc_id: item.usda_fdc_id || null // Add USDA ID
+                            is_usda: item.is_usda || false,
+                            usda_fdc_id: item.usda_fdc_id || null,
+                            // Make sure these fields are preserved
+                            size: item.size || '',
+                            descriptor: item.descriptor || '',
+                            additional_descriptor: item.additional_descriptor || ''  // Keep original field name
                           };
                         } else {
                           // Update checked state (if any item is checked, the group is checked)
                           if (item.checked) {
                             groupedItems[key].checked = true;
                           }
-                          
+
                           // Update USDA status (if any item is USDA, the group is USDA)
                           if (item.is_usda) {
                             groupedItems[key].is_usda = true;
                             groupedItems[key].usda_fdc_id = item.usda_fdc_id;
                           }
-                          
+
                           // Ensure quantities array exists and is populated
                           if (item.quantities && item.quantities.length) {
                             if (!groupedItems[key].quantities) {
@@ -494,8 +519,8 @@ function GroceryListView() {
                             // Only add quantities that aren't already in the group
                             item.quantities.forEach(qty => {
                               if (!groupedItems[key].quantities.some(
-                                existingQty => existingQty.recipe_id === qty.recipe_id && 
-                                              existingQty.quantity_text === qty.quantity_text)) {
+                                existingQty => existingQty.recipe_id === qty.recipe_id &&
+                                  existingQty.quantity_text === qty.quantity_text)) {
                                 groupedItems[key].quantities.push(qty);
                               }
                             });
@@ -524,28 +549,54 @@ function GroceryListView() {
                               </span>
 
                               {detailedView ? (
-                                // Detailed view: show all quantities with their sources
                                 <div className="item-quantities">
                                   {group.quantities && group.quantities.length > 0 ? (
                                     group.quantities.map((qty, qIndex) => (
                                       <div key={qIndex} className="quantity-entry">
+                                        {/* Base quantity and unit */}
                                         <span className="quantity-value">{qty.quantity_text}</span>
+
+                                        {/* Additional descriptive fields - only show size and descriptor, not additional_descriptor */}
+                                        {(group.size || group.descriptor) && (
+                                          <span className="detailed-info">
+                                            {group.size && <span className="item-size">{group.size}</span>}
+                                            {group.descriptor && (
+                                              <span className="item-descriptor">
+                                                {group.size ? ', ' : ''}{group.descriptor}
+                                              </span>
+                                            )}
+                                          </span>
+                                        )}
+
+                                        {/* Recipe source */}
                                         {qty.source && (
                                           <span className="quantity-source">from {qty.source}</span>
                                         )}
                                       </div>
                                     ))
                                   ) : (
-                                    // Fallback if quantities array is missing or empty
+                                    // Fallback display
                                     <span className="item-quantity">
-                                      {group.formatted_combined || 
-                                       (group.combined_quantity && group.unit ? 
-                                        `${group.combined_quantity} ${group.unit}` : "")}
+                                      {group.formatted_combined ||
+                                        (group.combined_quantity && group.unit ?
+                                          `${group.combined_quantity} ${group.unit}` : "")}
+
+                                      {/* Additional fields in fallback case - only size and descriptor */}
+                                      {(group.size || group.descriptor) && (
+                                        <span className="detailed-info">
+                                          {group.size && <span className="item-size">{group.size}</span>}
+                                          {group.descriptor && (
+                                            <span className="item-descriptor">
+                                              {group.size ? ', ' : ''}{group.descriptor}
+                                            </span>
+                                          )}
+                                        </span>
+                                      )}
                                     </span>
                                   )}
                                 </div>
                               ) : (
-                                // Simple view: show combined quantity
+                                // Simple view remains unchanged
                                 <span className="item-quantity">
                                   {group.formatted_combined || ""}
                                 </span>

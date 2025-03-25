@@ -9,33 +9,67 @@ ingredient_routes = Blueprint('ingredient_routes', __name__)
 
 @ingredient_routes.route('/api/ingredients', methods=['GET'])
 def get_ingredients():
-    """Get all ingredients, optionally with search query"""
+    """Get all ingredients, optionally with search query, meal plan filter, and mapping status"""
     try:
         query = request.args.get('query', '').lower()
+        weekly_plan_id = request.args.get('weekly_plan_id')
+        store_id = request.args.get('store_id')
+        unmapped_only = request.args.get('unmapped_only', 'false').lower() == 'true'
         
+        # Base query
+        ingredients_query = Ingredient.query
+        
+        # Apply weekly plan filter if provided
+        if weekly_plan_id:
+            from app.models import MealSlot, Recipe, RecipeIngredient
+            
+            # Find all recipes in the meal plan
+            recipe_ids = db.session.query(MealSlot.recipe_id)\
+                .filter(MealSlot.weekly_plan_id == weekly_plan_id)\
+                .filter(MealSlot.recipe_id != None)\
+                .distinct().all()
+            
+            recipe_ids = [r[0] for r in recipe_ids if r[0]]
+            
+            if recipe_ids:
+                # Filter ingredients to only those used in the meal plan recipes
+                ingredients_query = ingredients_query.join(
+                    RecipeIngredient,
+                    RecipeIngredient.ingredient_id == Ingredient.id
+                ).filter(
+                    RecipeIngredient.recipe_id.in_(recipe_ids)
+                ).distinct()
+            else:
+                # If no recipes in meal plan, return empty list
+                return jsonify([])
+        
+        # Apply unmapped filter if requested and store_id is provided
+        if unmapped_only and store_id:
+            # Get sections for this store
+            sections = Section.query.filter_by(store_id=store_id).all()
+            section_ids = [section.id for section in sections]
+            
+            # Find mapped ingredient IDs
+            mapped_ingredient_ids = db.session.query(IngredientSection.ingredient_id)\
+                .filter(IngredientSection.section_id.in_(section_ids))\
+                .distinct().all()
+            
+            mapped_ingredient_ids = [i[0] for i in mapped_ingredient_ids]
+            
+            # Filter out mapped ingredients
+            if mapped_ingredient_ids:
+                ingredients_query = ingredients_query.filter(
+                    ~Ingredient.id.in_(mapped_ingredient_ids)
+                )
+        
+        # Apply search query if provided
         if query:
-            # Search with case-insensitive partial match
-            ingredients = Ingredient.query.filter(
+            ingredients_query = ingredients_query.filter(
                 Ingredient.name.ilike(f"%{query}%")
-            ).order_by(Ingredient.name).all()
-            
-            # Also try to search in display_name if available
-            display_name_results = Ingredient.query.filter(
-                Ingredient.display_name.ilike(f"%{query}%")
-            ).all()
-            
-            # Combine results, ensuring no duplicates
-            ingredient_ids = {i.id for i in ingredients}
-            for item in display_name_results:
-                if item.id not in ingredient_ids:
-                    ingredients.append(item)
-                    ingredient_ids.add(item.id)
-            
-            # Sort results
-            ingredients.sort(key=lambda x: x.name)
-        else:
-            # Return all ingredients if no query
-            ingredients = Ingredient.query.order_by(Ingredient.name).all()
+            )
+        
+        # Order by name and execute query
+        ingredients = [ing for ing in ingredients if ing.name and ing.name.strip()]
         
         return jsonify([ingredient.to_dict() for ingredient in ingredients])
     except Exception as e:

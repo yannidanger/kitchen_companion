@@ -192,6 +192,8 @@ class RecipeIngredient(db.Model):
     ingredient = db.relationship("Ingredient", back_populates="ingredient_recipes")
 
     def to_dict(self):
+        # Add to RecipeIngredient.to_dict()
+        print(f"MODEL - to_dict: size='{self.size}', descriptor='{self.descriptor}', add_descriptor='{self.additional_descriptor}'")
         fraction_str = None
         if self.is_fraction and self.quantity_numerator is not None and self.quantity_denominator is not None:
             if self.quantity_numerator >= self.quantity_denominator:
