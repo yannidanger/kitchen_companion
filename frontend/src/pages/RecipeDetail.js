@@ -84,7 +84,7 @@ function RecipeDetail() {
     // Fetch available sub-recipes
     const fetchAvailableSubRecipes = async () => {
       try {
-        const response = await fetch(/api/sub_recipes);
+        const response = await fetch("/api/sub_recipes");
         const data = await response.json();
         setAvailableSubRecipes(data);
       } catch (error) {
