@@ -32,6 +32,7 @@ instance/
 *.db
 *.sqlite
 *.sqlite3
+SQLiteStuff/
 
 # React / Node.js
 node_modules/
